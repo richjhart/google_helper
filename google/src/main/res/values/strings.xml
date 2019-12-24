@@ -1,0 +1,13 @@
+<resources>
+
+    <string name="ads_publisher_id" translatable="false">pub-4750446129557325</string>
+
+    <string name="settings_summary_pro_off_no_price">Tap to purchase, or to refresh if you\'ve purchased already.</string>
+    <string name="settings_summary_pro_off">Tap to purchase (%s), or to refresh if you\'ve purchased already.</string>
+    <string name="settings_summary_pro_on">Already pro</string>
+    <string name="settings_summary_gdpr_non_personalised">Showing non-personalized ads. Tap to change</string>
+    <string name="settings_summary_gdpr_personalised">Showing personalized ads. Tap to change</string>
+    <string name="settings_summary_gdpr_unknown">Tap to select personalized or non-personalized ads</string>
+
+    <string name="app_name">google</string>
+</resources>

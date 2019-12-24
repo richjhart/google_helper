@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <Preference
+        android:key="purchase_1"
+        android:title="Purchase 1" />
+    <Preference
+        android:key="purchase_2"
+        android:title="Purchase 2" />
+    <Preference
+        android:key="purchase_3"
+        android:title="Purchase 3" />
+    <Preference
+        android:key="purchase_4"
+        android:title="Purchase 4" />
+    <Preference
+        android:key="purchase_5"
+        android:title="Purchase 5" />
+    <Preference
+        android:key="settings_gdpr"
+        android:title="Ad personalisation" />
+
+</PreferenceScreen>

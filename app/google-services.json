@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "582944020453",
+    "firebase_url": "https://billing-testing-30643.firebaseio.com",
+    "project_id": "billing-testing-30643",
+    "storage_bucket": "billing-testing-30643.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:582944020453:android:2902b6b9a938039d65810c",
+        "android_client_info": {
+          "package_name": "com.rjhartsoftware.googlehelper.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "582944020453-jtm63s18j9hf40ra5o5ehonr0j70vttr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rjhartsoftware.googlehelper.app",
+            "certificate_hash": "5b918029fc273d7b3998e98554f5e7112f2346b1"
+          }
+        },
+        {
+          "client_id": "582944020453-qo2qppbb3pmj5b15fau7qcmqbpjlilfr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApYUgXxw6lsMOhKkHbw_Q03h7CCgdQ-7A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "582944020453-qo2qppbb3pmj5b15fau7qcmqbpjlilfr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

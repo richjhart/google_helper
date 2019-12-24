@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="Gradle: com.github.richjhart:logcatdebug:1.2.3@aar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/transforms-2/files-2.1/921fd8507307516e8eeeaa7ff7b0928a/logcatdebug-1.2.3/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-2/files-2.1/921fd8507307516e8eeeaa7ff7b0928a/logcatdebug-1.2.3/res" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

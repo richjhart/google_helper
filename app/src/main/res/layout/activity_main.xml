@@ -6,14 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <Button
-        android:id="@+id/main_settings"
-        app:layout_constraintBottom_toTopOf="@id/adView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Settings"
-        tools:ignore="HardcodedText" />
-
     <FrameLayout
         android:id="@+id/main_fragment"
         android:layout_width="match_parent"

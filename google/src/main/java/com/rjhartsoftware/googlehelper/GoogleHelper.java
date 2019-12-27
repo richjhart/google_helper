@@ -106,6 +106,16 @@ public class GoogleHelper {
         return sInstance;
     }
 
+    public static void destroy(@Nullable Context context) {
+        try {
+            if (context != null) {
+                context.unregisterReceiver(sInstance.mNetworkReceiver);
+            }
+        } catch (Exception ignore) {
+
+        }
+    }
+
     public void registerActivity(Activity activity) {
         mActivity = new WeakReference<>(activity);
     }

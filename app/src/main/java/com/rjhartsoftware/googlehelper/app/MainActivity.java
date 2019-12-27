@@ -2,6 +2,7 @@ package com.rjhartsoftware.googlehelper.app;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
 
 import android.os.Bundle;
 import android.view.View;
@@ -11,7 +12,7 @@ import com.rjhartsoftware.fragments.FragmentTransactions;
 import com.rjhartsoftware.googlehelper.GoogleHelper;
 import com.rjhartsoftware.logcatdebug.D;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity {
 
     private static final String BILLING_PUBLIC_KEY =
             "KfgQX+uJRatBvR83DNowWpuUNKdCizEAJfAWXuOyPKROkz0EJ9YSXuOyQaR3liQKBeUXVpazVZ9RgzoRFMF2Ld" +
@@ -44,7 +45,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         GoogleHelper.getInstance().setHoldingView(findViewById(R.id.main_hide_ui));
         GoogleHelper.getInstance().registerAdView(findViewById(R.id.adView));
 
-        findViewById(R.id.main_settings).setOnClickListener(this);
+        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.main_fragment);
+        if (fragment == null) {
+            FragmentTransactions
+                    .beginTransaction(this)
+                    .add(R.id.main_fragment, new MainFragment(), MainFragment.TAG)
+                    .commit();
+        }
     }
 
     @Override
@@ -85,20 +92,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         GoogleHelper.getInstance().unregisterAdView();
         GoogleHelper.getInstance().releaseHoldingView();
         GoogleHelper.getInstance().unregisterActivity();
+        GoogleHelper.destroy(this);
         FragmentTransactions.activityDestroyed(this);
         super.onDestroy();
-    }
-
-    @Override
-    public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.main_settings:
-                FragmentTransactions
-                        .beginTransaction(this)
-                        .replace(R.id.main_fragment, new FragmentSettings(), FragmentSettings.TAG)
-                        .addToBackStack(FragmentSettings.TAG)
-                        .commit();
-                break;
-        }
     }
 }

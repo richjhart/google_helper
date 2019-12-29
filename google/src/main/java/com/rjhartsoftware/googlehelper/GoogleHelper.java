@@ -967,6 +967,7 @@ public class GoogleHelper {
         consentInformation.requestConsentInfoUpdate(publisherIds, new ConsentInfoUpdateListener() {
             @Override
             public void onConsentInfoUpdated(ConsentStatus consentStatus) {
+                mHandler.removeCallbacks(mConsentTimedOut);
                 if (ConsentInformation.getInstance(mContext).isRequestLocationInEeaOrUnknown()) {
                     switch (consentStatus) {
                         case PERSONALIZED:
@@ -1005,6 +1006,7 @@ public class GoogleHelper {
                     @Override
                     public void run() {
                         // don't show ads if consent has failed
+                        mHandler.removeCallbacks(mConsentTimedOut);
                         log(EU_CONSENT, "Failed to determine consent status: " + errorDescription); //NON-NLS
                         switch (mAdsStatus) {
                             case STATUS_ADS_ALLOWED_ANONYMOUS:
@@ -1075,6 +1077,7 @@ public class GoogleHelper {
                                 mHandler.postDelayed(new Runnable() {
                                     @Override
                                     public void run() {
+                                        mHandler.removeCallbacks(mConsentTimedOut);
                                         @InternalPurchaseStatus int adsPurchaseStatus = getAdsPurchaseStatus();
                                         log(EU_CONSENT, String.format("Consent form loaded. Pro status: %s", getPurchaseStatusName(adsPurchaseStatus)));
                                         // this affects the UI - showing it depends on the pro status
@@ -1156,6 +1159,7 @@ public class GoogleHelper {
                                 mHandler.postDelayed(new Runnable() {
                                     @Override
                                     public void run() {
+                                        mHandler.removeCallbacks(mConsentTimedOut);
                                         mConsentFormShowing = false;
                                         log(ADS, "Error getting consent from user. Don't show ads");
                                         D.warn(EU_CONSENT, "There was an error getting consent from the user: " + errorDescription); //NON-NLS

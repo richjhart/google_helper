@@ -74,17 +74,16 @@ import java.util.Map;
 import java.util.Random;
 
 public class GoogleHelper {
-    // TODO currently if the consent is not known when the purchase is consumed or internet is detected it does NOT block the app until consent is obtained
-    // currently it does it when the app restarts - it should do it straight away
-
     // region Initialisation and Constants
     private static final String SETTINGS_KEY_PURCHASE = "_ps.";
     private static final String SETTINGS_KEY_ADS = "_a";
+    private static final long CONSENT_LOAD_TIMEOUT = 10 * 1000;
 
     private final BroadcastReceiver mNetworkReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             log(GENERAL, "Network changed - check connectivity"); //NON-NLS
+            maybeResetAdsStatus();
             start();
         }
     };
@@ -922,6 +921,25 @@ public class GoogleHelper {
         }
     }
 
+    private void maybeResetAdsStatus() {
+        switch (mAdsStatus) {
+            case GoogleHelper.STATUS_ADS_CONSENT_FAILED:
+            case GoogleHelper.STATUS_ADS_UNKNOWN:
+                setAdsStatus(STATUS_ADS_CONSENT_UNKNOWN);
+                break;
+            case GoogleHelper.STATUS_ADS_ALLOWED_ANONYMOUS:
+            case GoogleHelper.STATUS_ADS_ALLOWED_NON_EU:
+            case GoogleHelper.STATUS_ADS_ALLOWED_PERSONALISED:
+            case GoogleHelper.STATUS_ADS_CONSENT_UNKNOWN:
+            case GoogleHelper.STATUS_ADS_INIT:
+            case GoogleHelper.STATUS_ADS_NOTHING:
+            case GoogleHelper.STATUS_ADS_PREFER_PAID:
+            case GoogleHelper.STATUS_ADS_REQUESTING_CONSENT:
+                // do nothing
+                break;
+        }
+    }
+
     private void checkAdConsent() {
         log(EU_CONSENT, "Checking for existing consent status"); //NON-NLS
         ConsentInformation consentInformation = ConsentInformation.getInstance(mContext);
@@ -1237,6 +1255,7 @@ public class GoogleHelper {
         PurchaseInfo info = mPurchaseInfo.get(key);
         assert info != null;
         D.log(BILLING, String.format(Locale.US, "Updating purchase status for %s from %s to %s", key, getPurchaseStatusName(info.status), getPurchaseStatusName(status))); //NON-NLS
+        @InternalPurchaseStatus int initialAdsStatus = getAdsPurchaseStatus();
         if (info.status != status) {
             info.status = status;
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
@@ -1244,6 +1263,9 @@ public class GoogleHelper {
             //noinspection StringConcatenation
             editor.putInt(SETTINGS_KEY_PURCHASE + key.hashCode(), status);
             editor.apply();
+            if (initialAdsStatus != getAdsPurchaseStatus()) {
+                maybeResetAdsStatus();
+            }
             updateMainStatus();
             purchasesStatusChanged();
         }

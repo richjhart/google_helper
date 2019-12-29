@@ -89,8 +89,9 @@ public class MainFragment extends Fragment implements View.OnClickListener, Goog
         ((CheckBox)view.findViewById(R.id.main_purchase_status_3)).setChecked(
                 GoogleHelper.getInstance().getPurchaseStatus("purchase_3", true) == GoogleHelper.PURCHASE_ENABLED
         );
+        @GoogleHelper.PurchaseStatus int p4 = GoogleHelper.getInstance().getPurchaseStatus("purchase_4", true);
         ((CheckBox)view.findViewById(R.id.main_purchase_status_4)).setChecked(
-                GoogleHelper.getInstance().getPurchaseStatus("purchase_4", true) == GoogleHelper.PURCHASE_ENABLED
+                 GoogleHelper.PURCHASE_ENABLED == p4
         );
         ((CheckBox)view.findViewById(R.id.main_purchase_status_5)).setChecked(
                 GoogleHelper.getInstance().getPurchaseStatus("purchase_5", true) != GoogleHelper.PURCHASE_DISABLED

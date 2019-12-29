@@ -12,7 +12,14 @@ import com.rjhartsoftware.fragments.FragmentTransactions;
 import com.rjhartsoftware.googlehelper.GoogleHelper;
 import com.rjhartsoftware.logcatdebug.D;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class MainActivity extends AppCompatActivity {
+
+    private static final int ANALYTICS_EVENT = 10001;
+    private static final int ANALYTICS_WARNING = 10002;
+    private static final int ANALYTICS_ERROR = 10003;
 
     private static final String BILLING_PUBLIC_KEY =
             "KfgQX+uJRatBvR83DNowWpuUNKdCizEAJfAWXuOyPKROkz0EJ9YSXuOyQaR3liQKBeUXVpazVZ9RgzoRFMF2Ld" +
@@ -52,6 +59,14 @@ public class MainActivity extends AppCompatActivity {
                     .add(R.id.main_fragment, new MainFragment(), MainFragment.TAG)
                     .commit();
         }
+
+        GoogleHelper.reportDebugInfo(ANALYTICS_EVENT, GoogleHelper.ANALYTICS_STATUS_EVENT, 10, "Event");
+        GoogleHelper.reportDebugInfo(ANALYTICS_WARNING, GoogleHelper.ANALYTICS_STATUS_WARNING, 10, "Warning");
+        GoogleHelper.reportDebugInfo(ANALYTICS_ERROR, GoogleHelper.ANALYTICS_STATUS_ERROR, 10, "Error");
+
+        Map<String, Object> items = new HashMap<>();
+        items.put("time", System.currentTimeMillis());
+        GoogleHelper.store("debug_test", items);
     }
 
     @Override

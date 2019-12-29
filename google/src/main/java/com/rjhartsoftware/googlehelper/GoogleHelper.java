@@ -10,7 +10,7 @@ import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
+import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.view.View;
@@ -19,6 +19,7 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.preference.Preference;
+import androidx.preference.PreferenceManager;
 
 import com.android.billingclient.api.AcknowledgePurchaseParams;
 import com.android.billingclient.api.AcknowledgePurchaseResponseListener;
@@ -77,7 +78,6 @@ public class GoogleHelper {
     // region Initialisation and Constants
     private static final String SETTINGS_KEY_PURCHASE = "_ps.";
     private static final String SETTINGS_KEY_ADS = "_a";
-    private static final long CONSENT_LOAD_TIMEOUT = 10 * 1000;
 
     private final BroadcastReceiver mNetworkReceiver = new BroadcastReceiver() {
         @Override
@@ -647,6 +647,7 @@ public class GoogleHelper {
                         break;
                     case STATUS_ADS_CONSENT_FAILED:
                     case STATUS_ADS_UNKNOWN:
+                    case STATUS_ADS_CONSENT_TIMED_OUT:
                     default:
                         // weren't able to get the consent status
                         // allow the app to run without ads
@@ -861,7 +862,8 @@ public class GoogleHelper {
                     STATUS_ADS_ALLOWED_ANONYMOUS,
                     STATUS_ADS_REQUESTING_CONSENT,
                     STATUS_ADS_CONSENT_UNKNOWN,
-                    STATUS_ADS_CONSENT_FAILED
+                    STATUS_ADS_CONSENT_FAILED,
+                    STATUS_ADS_CONSENT_TIMED_OUT
             })
     @Retention(RetentionPolicy.SOURCE)
     @interface StatusAds {
@@ -889,9 +891,14 @@ public class GoogleHelper {
                 return "Consent Not Available";
             case STATUS_ADS_CONSENT_FAILED:
                 return "Consent determination has failed";
+            case STATUS_ADS_CONSENT_TIMED_OUT:
+                return "Consent status has timed out";
         }
         return "N/A";
     }
+
+    private static final long CONSENT_LOAD_TIMEOUT = 15 * 1000;
+    private static final long CONSENT_FORCED_DELAY = 0;
 
     private static final int STATUS_ADS_INIT = -1;
     private static final int STATUS_ADS_NOTHING = 0;
@@ -903,6 +910,15 @@ public class GoogleHelper {
     private static final int STATUS_ADS_REQUESTING_CONSENT = 6;
     private static final int STATUS_ADS_CONSENT_UNKNOWN = 7;
     private static final int STATUS_ADS_CONSENT_FAILED = 8;
+    private static final int STATUS_ADS_CONSENT_TIMED_OUT = 9;
+
+    private final Handler mHandler = new Handler();
+    private final Runnable mConsentTimedOut = new Runnable() {
+        @Override
+        public void run() {
+            setAdsStatus(STATUS_ADS_CONSENT_TIMED_OUT);
+        }
+    };
 
     @StatusAds
     private int mAdsStatus = STATUS_ADS_INIT;
@@ -925,6 +941,10 @@ public class GoogleHelper {
         switch (mAdsStatus) {
             case GoogleHelper.STATUS_ADS_CONSENT_FAILED:
             case GoogleHelper.STATUS_ADS_UNKNOWN:
+                setAdsStatus(STATUS_ADS_CONSENT_UNKNOWN);
+                break;
+            case GoogleHelper.STATUS_ADS_CONSENT_TIMED_OUT:
+                mConsentFormShowing = false;
                 setAdsStatus(STATUS_ADS_CONSENT_UNKNOWN);
                 break;
             case GoogleHelper.STATUS_ADS_ALLOWED_ANONYMOUS:
@@ -981,29 +1001,36 @@ public class GoogleHelper {
 
             @Override
             public void onFailedToUpdateConsentInfo(String errorDescription) {
-                // don't show ads if consent has failed
-                log(EU_CONSENT, "Failed to determine consent status: " + errorDescription); //NON-NLS
-                switch (mAdsStatus) {
-                    case STATUS_ADS_ALLOWED_ANONYMOUS:
-                    case STATUS_ADS_ALLOWED_NON_EU:
-                    case STATUS_ADS_ALLOWED_PERSONALISED:
-                        // don't downgrade the ads status if it was previously known
-                        log(ADS, "We previously knew the consent, don't downgrade to unknown on error");
-                        break;
-                    case STATUS_ADS_CONSENT_UNKNOWN:
-                    case STATUS_ADS_INIT:
-                    case STATUS_ADS_NOTHING:
-                    case STATUS_ADS_PREFER_PAID:
-                    case STATUS_ADS_REQUESTING_CONSENT:
-                    case STATUS_ADS_UNKNOWN:
-                    case STATUS_ADS_CONSENT_FAILED:
-                        log(ADS, "Failed to determine consent");
-                        setAdsStatus(STATUS_ADS_CONSENT_FAILED);
-                        break;
-                }
-                reportDebugInfo('c', CONSENT_FAILED_TO_GET_STATUS, ANALYTICS_STATUS_WARNING, null, errorDescription);
+                mHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        // don't show ads if consent has failed
+                        log(EU_CONSENT, "Failed to determine consent status: " + errorDescription); //NON-NLS
+                        switch (mAdsStatus) {
+                            case STATUS_ADS_ALLOWED_ANONYMOUS:
+                            case STATUS_ADS_ALLOWED_NON_EU:
+                            case STATUS_ADS_ALLOWED_PERSONALISED:
+                                // don't downgrade the ads status if it was previously known
+                                log(ADS, "We previously knew the consent, don't downgrade to unknown on error");
+                                break;
+                            case STATUS_ADS_CONSENT_UNKNOWN:
+                            case STATUS_ADS_INIT:
+                            case STATUS_ADS_NOTHING:
+                            case STATUS_ADS_PREFER_PAID:
+                            case STATUS_ADS_REQUESTING_CONSENT:
+                            case STATUS_ADS_UNKNOWN:
+                            case STATUS_ADS_CONSENT_FAILED:
+                            case STATUS_ADS_CONSENT_TIMED_OUT:
+                                log(ADS, "Failed to determine consent");
+                                setAdsStatus(STATUS_ADS_CONSENT_FAILED);
+                                break;
+                        }
+                        reportDebugInfo('c', CONSENT_FAILED_TO_GET_STATUS, ANALYTICS_STATUS_WARNING, null, errorDescription);
+                    }
+                }, CONSENT_FORCED_DELAY);
             }
         });
+        mHandler.postDelayed(mConsentTimedOut, CONSENT_LOAD_TIMEOUT);
     }
 
     public void clearConsent() {
@@ -1018,9 +1045,6 @@ public class GoogleHelper {
     private boolean mConsentFormShowing = false;
 
     private void requestConsent() {
-        // TODO if the form takes a long time to load then assume it's failed, but it should be a sort of soft failure (TAKING_TOO_LONG)
-        // allow the app to load, don't show ads. But if the consent form loads - whichever status returns takes over
-
         // note: the form is prepared regardless of the pro status
         // it's only at the point of showing it that we might stop
         log(EU_CONSENT, "Requesting consent from user");
@@ -1048,43 +1072,48 @@ public class GoogleHelper {
                             @Override
                             public void onConsentFormLoaded() {
                                 super.onConsentFormLoaded();
-                                @InternalPurchaseStatus int adsPurchaseStatus = getAdsPurchaseStatus();
-                                log(EU_CONSENT, String.format("Consent form loaded. Pro status: %s", getPurchaseStatusName(adsPurchaseStatus)));
-                                // this affects the UI - showing it depends on the pro status
-                                switch (adsPurchaseStatus) {
-                                    case INT_STATUS_PURCHASE_OFF:
-                                        log(ADS, "Pro is off, so requesting consent");
-                                        D.log(EU_CONSENT, "Attempting to display consent form"); //NON-NLS
-                                        setAdsStatus(STATUS_ADS_REQUESTING_CONSENT);
-                                        reportDebugInfo('c', CONSENT_SHOWING_CONSENT, ANALYTICS_STATUS_EVENT, null, null);
-                                        if (!activity.isFinishing()) {
-                                            mConsentForm.show();
-                                            return;
-                                        } else {
-                                            log(EU_CONSENT, "App has already quit... do nothing"); //NON-NLS
+                                mHandler.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        @InternalPurchaseStatus int adsPurchaseStatus = getAdsPurchaseStatus();
+                                        log(EU_CONSENT, String.format("Consent form loaded. Pro status: %s", getPurchaseStatusName(adsPurchaseStatus)));
+                                        // this affects the UI - showing it depends on the pro status
+                                        switch (adsPurchaseStatus) {
+                                            case INT_STATUS_PURCHASE_OFF:
+                                                log(ADS, "Pro is off, so requesting consent");
+                                                D.log(EU_CONSENT, "Attempting to display consent form"); //NON-NLS
+                                                setAdsStatus(STATUS_ADS_REQUESTING_CONSENT);
+                                                reportDebugInfo('c', CONSENT_SHOWING_CONSENT, ANALYTICS_STATUS_EVENT, null, null);
+                                                if (!activity.isFinishing()) {
+                                                    mConsentForm.show();
+                                                    return;
+                                                } else {
+                                                    log(EU_CONSENT, "App has already quit... do nothing"); //NON-NLS
+                                                }
+                                                break;
+                                            case INT_STATUS_PURCHASE_ON:
+                                                log(ADS, "Pro is on, so don't request consent");
+                                                D.log(EU_CONSENT, "pro on - we're not showing ads"); //NON-NLS
+                                                setAdsStatus(STATUS_ADS_UNKNOWN);
+                                                break;
+                                            case INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT:
+                                                log(ADS, "Purchasing - wait for that to complete");
+                                                D.log(EU_CONSENT, "purchasing now - do nothing (keep waiting)"); //NON-NLS
+                                                break;
+                                            case INT_STATUS_PURCHASE_INIT:
+                                            case INT_STATUS_PURCHASE_NOTHING:
+                                            case INT_STATUS_PURCHASE_UNKNOWN:
+                                            default:
+                                                // if the pro is determined to be off (i.e later), hide the app
+                                                log(ADS, "pro status not yet known. keep waiting and not setting any ad status yet");
+                                                D.log(EU_CONSENT, "pro status not yet known. keep waiting"); //NON-NLS
+                                                setAdsStatus(STATUS_ADS_NOTHING);
+                                                break;
                                         }
-                                        break;
-                                    case INT_STATUS_PURCHASE_ON:
-                                        log(ADS, "Pro is on, so don't request consent");
-                                        D.log(EU_CONSENT, "pro on - we're not showing ads"); //NON-NLS
-                                        setAdsStatus(STATUS_ADS_UNKNOWN);
-                                        break;
-                                    case INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT:
-                                        log(ADS, "Purchasing - wait for that to complete");
-                                        D.log(EU_CONSENT, "purchasing now - do nothing (keep waiting)"); //NON-NLS
-                                        break;
-                                    case INT_STATUS_PURCHASE_INIT:
-                                    case INT_STATUS_PURCHASE_NOTHING:
-                                    case INT_STATUS_PURCHASE_UNKNOWN:
-                                    default:
-                                        // if the pro is determined to be off (i.e later), hide the app
-                                        log(ADS, "pro status not yet known. keep waiting and not setting any ad status yet");
-                                        D.log(EU_CONSENT, "pro status not yet known. keep waiting"); //NON-NLS
-                                        setAdsStatus(STATUS_ADS_NOTHING);
-                                        break;
-                                }
-                                // if we get to here, we haven't actually shown it
-                                mConsentFormShowing = false;
+                                        // if we get to here, we haven't actually shown it
+                                        mConsentFormShowing = false;
+                                    }
+                                }, CONSENT_FORCED_DELAY);
                             }
 
                             @Override
@@ -1124,11 +1153,16 @@ public class GoogleHelper {
 
                             @Override
                             public void onConsentFormError(String errorDescription) {
-                                mConsentFormShowing = false;
-                                log(ADS, "Error getting consent from user. Don't show ads");
-                                D.warn(EU_CONSENT, "There was an error getting consent from the user: " + errorDescription); //NON-NLS
-                                setAdsStatus(STATUS_ADS_CONSENT_FAILED);
-                                reportDebugInfo('c', CONSENT_FORM_ERROR, ANALYTICS_STATUS_WARNING, null, null);
+                                mHandler.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        mConsentFormShowing = false;
+                                        log(ADS, "Error getting consent from user. Don't show ads");
+                                        D.warn(EU_CONSENT, "There was an error getting consent from the user: " + errorDescription); //NON-NLS
+                                        setAdsStatus(STATUS_ADS_CONSENT_FAILED);
+                                        reportDebugInfo('c', CONSENT_FORM_ERROR, ANALYTICS_STATUS_WARNING, null, null);
+                                    }
+                                }, CONSENT_FORCED_DELAY);
                             }
 
                         })
@@ -1137,6 +1171,7 @@ public class GoogleHelper {
                         .withAdFreeOption()
                         .build();
                 mConsentForm.load();
+                mHandler.postDelayed(mConsentTimedOut, CONSENT_LOAD_TIMEOUT);
             } else {
                 mConsentFormShowing = false;
                 D.warn(EU_CONSENT, "Activity not available trying to load consent form");
@@ -1817,6 +1852,7 @@ public class GoogleHelper {
                         case STATUS_ADS_UNKNOWN:
                         case STATUS_ADS_CONSENT_UNKNOWN:
                         case STATUS_ADS_CONSENT_FAILED:
+                        case STATUS_ADS_CONSENT_TIMED_OUT:
                             mPrefGdpr.setVisible(false);
                             break;
                     }

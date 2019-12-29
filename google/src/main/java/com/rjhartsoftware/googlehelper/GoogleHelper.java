@@ -311,7 +311,7 @@ public class GoogleHelper {
     }
 
     private static void log(D.DebugTag tag, String entry) {
-        D.log(tag, entry);
+        D.log(tag.indirect(), entry);
         log(entry);
     }
 
@@ -716,7 +716,8 @@ public class GoogleHelper {
             "E1AADDC4BD1DC95985EBE1D13213C449", // Lenovo Tablet
             "444BEDEEF8F91E966568DC77F501B0DC", // Nexus 5X
             "69EA90F05BCC277953430441647E510D", // Moto G4
-            "B3C04AB901B835A4AB4918589505C09C", // OnePlus 6
+            "B3C04AB901B835A4AB4918589505C09C", // OnePlus 6 (Old)
+            "50A95DB0BE39AC18B27492AAA4076A3A", // OnePlus 6
             "5BD2A4C64D83D92CF61D07E1133907C8", // Nexus 5X
     };
 

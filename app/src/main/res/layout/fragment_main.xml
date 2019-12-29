@@ -63,6 +63,14 @@
         tools:ignore="HardcodedText" />
 
     <Button
+        android:id="@+id/main_clear_consent"
+        app:layout_constraintBottom_toTopOf="@id/main_consume"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Clear Consent"
+        tools:ignore="HardcodedText" />
+
+    <Button
         android:id="@+id/main_consume"
         app:layout_constraintBottom_toTopOf="@id/main_settings"
         android:layout_width="match_parent"

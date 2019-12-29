@@ -24,6 +24,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Goog
 
         v.findViewById(R.id.main_settings).setOnClickListener(this);
         v.findViewById(R.id.main_consume).setOnClickListener(this);
+        v.findViewById(R.id.main_clear_consent).setOnClickListener(this);
 
         GoogleHelper.getInstance().registerPurchaseChangeListener(this);
         updateStatus(v);
@@ -54,7 +55,14 @@ public class MainFragment extends Fragment implements View.OnClickListener, Goog
                         .commit();
                 break;
             case R.id.main_consume:
-                GoogleHelper.getInstance().consumeAllPurchases();
+                GoogleHelper.getInstance().consumePurchase("purchase_1");
+                GoogleHelper.getInstance().consumePurchase("purchase_2");
+                GoogleHelper.getInstance().consumePurchase("purchase_3");
+                GoogleHelper.getInstance().consumePurchase("purchase_4");
+                GoogleHelper.getInstance().consumePurchase("purchase_5");
+                break;
+            case R.id.main_clear_consent:
+                GoogleHelper.getInstance().clearConsent();
                 break;
         }
 

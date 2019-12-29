@@ -84,7 +84,7 @@ public class GoogleHelper {
     private final BroadcastReceiver mNetworkReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            log(D.GENERAL, "Network changed - check connectivity"); //NON-NLS
+            log(GENERAL, "Network changed - check connectivity"); //NON-NLS
             start();
         }
     };
@@ -146,7 +146,7 @@ public class GoogleHelper {
     }
 
     private void initO(@NonNull Context context) {
-        log("Attaching to context");
+        log(GENERAL, "Attaching to context");
         mContext = (Application) context.getApplicationContext();
         IntentFilter connFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
         context.registerReceiver(mNetworkReceiver, connFilter);
@@ -165,18 +165,18 @@ public class GoogleHelper {
     }
 
     public void start() {
-        log("'Starting'");
+        log(GENERAL, "'Starting'");
         initialiseBilling();
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
         if (mAdsStatus == STATUS_ADS_INIT) {
-            log("Startup - init ads status to saved value");
             D.log(ADS, "Startup - initialising ads status to saved value");
             setAdsStatus(prefs.getInt(SETTINGS_KEY_ADS, STATUS_ADS_NOTHING));
         }
         for (PurchaseInfo info : mPurchaseInfo.values()) {
             if (info.status == INT_STATUS_PURCHASE_INIT) {
                 //noinspection StringConcatenation
+                D.log(BILLING, "Startup - initialising purchase status of %s to saved value", info.key);
                 setPurchaseStatus(info.key, prefs.getInt(SETTINGS_KEY_PURCHASE + info.key.hashCode(), INT_STATUS_PURCHASE_NOTHING));
             }
         }
@@ -186,12 +186,13 @@ public class GoogleHelper {
     // endregion
 
     //region Analytics and Firebase
+    private static final D.DebugTag GENERAL = new D.DebugTag("google_general");
     private static final D.DebugTag ANALYTICS = new D.DebugTag("google_analytics");
     private static final D.DebugTag BILLING = new D.DebugTag("google_billing");
     private static final D.DebugTag EU_CONSENT = new D.DebugTag("google_consent");
     private static final D.DebugTag ADS = new D.DebugTag("google_ads");
     private static final D.DebugTag FIRESTORE = new D.DebugTag("google_firestore");
-    private static final D.DebugTag VERBOSE = new D.DebugTag("verbose", false);
+    private static final D.DebugTag VERBOSE = new D.DebugTag("google_verbose", false);
 
     private static DocumentReference sVerboseDoc = null;
 
@@ -312,10 +313,6 @@ public class GoogleHelper {
 
     private static void log(D.DebugTag tag, String entry) {
         D.log(tag.indirect(), entry);
-        log(entry);
-    }
-
-    private static void log(String entry) {
         if (D.isLogging(VERBOSE)) {
             try {
                 FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -421,22 +418,22 @@ public class GoogleHelper {
     }
 
     public void setHoldingView(View waitView) {
-        log("Setting holding view");
+        log(EU_CONSENT, "Setting holding view");
         mHoldingView = waitView;
         updateOverallVisibility();
         if (mAdsStatus == STATUS_ADS_REQUESTING_CONSENT) {
-            log("Requesting consent (from registering holding view");
+            log(EU_CONSENT, "Requesting consent (from registering holding view");
             requestConsent();
         }
     }
 
     public void releaseHoldingView() {
-        log("Releasing holding view");
+        log(EU_CONSENT, "Releasing holding view");
         mHoldingView = null;
     }
 
     private void setStatus(@Status int status) {
-        log(String.format("Updating overall status from %s to %s", getStatus(mOverallStatus), getStatus(status)));
+        log(GENERAL, String.format("Updating overall status from %s to %s", getStatus(mOverallStatus), getStatus(status)));
         if (status != mOverallStatus) {
             D.log(ADS, "Updating overall status from %s to %s", getStatus(mOverallStatus), getStatus(status));
             mOverallStatus = status;
@@ -616,7 +613,7 @@ public class GoogleHelper {
 
     private void updateMainStatus() {
         @InternalPurchaseStatus int currentPurchaseStatus = getAdsPurchaseStatus();
-        log(String.format("Updating overall status... Pro is %s. Ads is %s", getPurchaseStatusName(currentPurchaseStatus), getAdsStatusName(mAdsStatus)));
+        log(ADS, String.format("Updating overall status... Pro is %s. Ads is %s", getPurchaseStatusName(currentPurchaseStatus), getAdsStatusName(mAdsStatus)));
         switch (currentPurchaseStatus) {
             case INT_STATUS_PURCHASE_OFF:
                 switch (mAdsStatus) {
@@ -685,14 +682,14 @@ public class GoogleHelper {
     }
 
     private void updateOverallVisibility() {
-        log(String.format("Updating visibility of whole app... Status: %s", getStatus(mOverallStatus)));
+        log(EU_CONSENT, String.format("Updating visibility of whole app... Status: %s", getStatus(mOverallStatus)));
         if (mHoldingView != null) {
-            log("Holding view is set...");
+            log(EU_CONSENT, "Holding view is set...");
             switch (mOverallStatus) {
                 case GoogleHelper.STATUS_WAITING:
                 case GoogleHelper.STATUS_REQUEST_PAID:
                     // hide the UI
-                    log("Hiding the UI");
+                    log(EU_CONSENT, "Hiding the UI");
                     mHoldingView.setVisibility(View.VISIBLE);
                     break;
                 case GoogleHelper.STATUS_HIDE_ADS:
@@ -700,7 +697,7 @@ public class GoogleHelper {
                 case GoogleHelper.STATUS_SHOW_ANONYMOUS_ADS:
                 default:
                     // show the UI
-                    log("Showing the UI");
+                    log(EU_CONSENT, "Showing the UI");
                     mHoldingView.setVisibility(View.GONE);
                     break;
             }
@@ -915,7 +912,7 @@ public class GoogleHelper {
     private void setAdsStatus(@StatusAds int status) {
         log(ADS, String.format(Locale.US, "Updating ads status from %s to %s", getAdsStatusName(mAdsStatus), getAdsStatusName(status))); //NON-NLS
         if (mAdsStatus != status) {
-            log("Ads status has changed...");
+            log(ADS, "Ads status has changed...");
             mAdsStatus = status;
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
             SharedPreferences.Editor editor = prefs.edit();
@@ -991,7 +988,7 @@ public class GoogleHelper {
         });
     }
 
-    private void clearConsent() {
+    public void clearConsent() {
         log(ADS, "Consent has been cleared");
         ConsentInformation consentInformation = ConsentInformation.getInstance(mContext);
         consentInformation.setConsentStatus(ConsentStatus.UNKNOWN);
@@ -1008,19 +1005,19 @@ public class GoogleHelper {
 
         // note: the form is prepared regardless of the pro status
         // it's only at the point of showing it that we might stop
-        log("Requesting consent from user");
+        log(EU_CONSENT, "Requesting consent from user");
         URL privacyUrl;
         try {
             privacyUrl = new URL(PRIVACY_URL);
         } catch (MalformedURLException e) {
-            D.error(D.GENERAL, "Internal error - should never happen", e); //NON-NLS
+            D.error(GENERAL, "Internal error - should never happen", e); //NON-NLS
             reportDebugInfo('c', CONSENT_ERROR_LOADING_PRIVACY_POLICY, ANALYTICS_STATUS_WARNING, null, null);
             D.log(ADS, "Error getting consent - should never happen");
             setAdsStatus(STATUS_ADS_UNKNOWN);
             return;
         }
         if (mConsentFormShowing) {
-            log("Consent form already (apparently) showing - do nothing");
+            log(EU_CONSENT, "Consent form already (apparently) showing - do nothing");
             return;
         }
         mConsentFormShowing = true;
@@ -1034,7 +1031,7 @@ public class GoogleHelper {
                             public void onConsentFormLoaded() {
                                 super.onConsentFormLoaded();
                                 @InternalPurchaseStatus int adsPurchaseStatus = getAdsPurchaseStatus();
-                                log(String.format("Consent form loaded. Pro status: %s", getPurchaseStatusName(adsPurchaseStatus)));
+                                log(EU_CONSENT, String.format("Consent form loaded. Pro status: %s", getPurchaseStatusName(adsPurchaseStatus)));
                                 // this affects the UI - showing it depends on the pro status
                                 switch (adsPurchaseStatus) {
                                     case INT_STATUS_PURCHASE_OFF:
@@ -1261,7 +1258,7 @@ public class GoogleHelper {
     }
 
     private void initialiseBilling() {
-        log("Initialise billing");
+        log(BILLING, "Initialise billing");
         startServiceConnection(new Runnable() {
             @Override
             public void run() {
@@ -1274,12 +1271,12 @@ public class GoogleHelper {
     }
 
     private void executeServiceRequest(Runnable runnable) {
-        log("Requesting service request (Google action)");
+        log(BILLING, "Requesting service request (Google action)");
         if (mIsServiceConnected) {
-            log("Ready to run - running immediately");
+            log(BILLING, "Ready to run - running immediately");
             runnable.run();
         } else {
-            log("Not ready to run - restarting service connection");
+            log(BILLING, "Not ready to run - restarting service connection");
             startServiceConnection(runnable);
         }
     }
@@ -1290,13 +1287,13 @@ public class GoogleHelper {
             public void onBillingSetupFinished(BillingResult billingResult) {
                 log(BILLING, "Setup finished. Response code: " + getBillingResponseString(billingResult.getResponseCode())); //NON-NLS
                 if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                    log("Billing setup worked. Check for pro status");
+                    log(BILLING, "Billing setup worked. Check for pro status");
                     mIsServiceConnected = true;
                     if (executeOnSuccess != null) {
                         executeOnSuccess.run();
                     }
                 } else {
-                    log("Billing failed. Set to unknown if not already set");
+                    log(BILLING, "Billing failed. Set to unknown if not already set");
                     for (PurchaseInfo info : mPurchaseInfo.values()) {
                         if (info.status == INT_STATUS_PURCHASE_INIT || info.status == INT_STATUS_PURCHASE_NOTHING) {
                             setPurchaseStatus(info.key, INT_STATUS_PURCHASE_UNKNOWN);
@@ -1308,7 +1305,7 @@ public class GoogleHelper {
 
             @Override
             public void onBillingServiceDisconnected() {
-                log("Billing service has disconnected");
+                log(BILLING, "Billing service has disconnected");
                 mIsServiceConnected = false;
                 for (PurchaseInfo info : mPurchaseInfo.values()) {
                     if (info.status == INT_STATUS_PURCHASE_INIT || info.status == INT_STATUS_PURCHASE_NOTHING) {
@@ -1349,11 +1346,11 @@ public class GoogleHelper {
     }
 
     private void queryPurchases() {
-        log("Querying purchases");
+        log(BILLING, "Querying purchases");
         Runnable queryToExecute = new Runnable() {
             @Override
             public void run() {
-                log("Running purchases query");
+                log(BILLING, "Running purchases query");
                 long time = System.currentTimeMillis();
                 Purchase.PurchasesResult purchasesResult = mBillingClient.queryPurchases(BillingClient.SkuType.INAPP);
                 D.log(BILLING, "Querying purchases elapsed time: " + (System.currentTimeMillis() - time) + "ms"); //NON-NLS
@@ -1385,11 +1382,11 @@ public class GoogleHelper {
     }
 
     private void queryProducts() {
-        log("Get product details");
+        log(BILLING, "Get product details");
         Runnable queryToExecute = new Runnable() {
             @Override
             public void run() {
-                log("Running product query");
+                log(BILLING, "Running product query");
                 List<String> skus = new ArrayList<>();
                 for (PurchaseInfo info : mPurchaseInfo.values()) {
                     skus.add(info.key);
@@ -1464,17 +1461,17 @@ public class GoogleHelper {
                             .build();
                     BillingResult result = mBillingClient.launchBillingFlow(activity, purchaseParams);
                     if (result.getResponseCode() == BillingClient.BillingResponseCode.OK || result.getResponseCode() == BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED) {
-                        log("Purchase flow started successfully");
+                        log(BILLING, "Purchase flow started successfully");
                         if (fromConsent) {
-                            log("Purchasing from consent");
+                            log(BILLING, "Purchasing from consent");
                             setPurchaseStatus(key, INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT);
                         }
                     } else {
-                        log("Error starting purchase flow");
+                        log(BILLING, "Error starting purchase flow");
                         reportDebugInfo('b', BILLING_PURCHASE_START_ERROR_BASE, ANALYTICS_STATUS_WARNING, result.getResponseCode(), null);
                     }
                     if (result.getResponseCode() == BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED) {
-                        log("Item already owned - verify the purchase");
+                        log(BILLING, "Item already owned - verify the purchase");
                         queryPurchases();
                     }
                 }
@@ -1489,10 +1486,10 @@ public class GoogleHelper {
 
         @Override
         public void onPurchasesUpdated(BillingResult result, @Nullable List<Purchase> purchases) {
-            log("Purchases updated...");
+            log(BILLING, "Purchases updated...");
             switch (result.getResponseCode()) {
                 case BillingClient.BillingResponseCode.OK:
-                    log("Purchase updated - success. Verify the signature");
+                    log(BILLING, "Purchase updated - success. Verify the signature");
                     if (purchases != null) {
                         for (PurchaseInfo info : mPurchaseInfo.values()) {
                             for (Purchase purchase : purchases) {
@@ -1518,7 +1515,7 @@ public class GoogleHelper {
                     }
                     break;
                 case BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED:
-                    log("Item is already owned - query and verify");
+                    log(BILLING, "Item is already owned - query and verify");
                     queryPurchases();
                     break;
                 default:
@@ -1538,16 +1535,8 @@ public class GoogleHelper {
         }
     }
 
-    // this is currently only used for debugging
-    public void consumeAllPurchases() {
-        for (PurchaseInfo info : mPurchaseInfo.values()) {
-            consumePurchase(info.key);
-        }
-        clearConsent();
-    }
-
     // this is only used for debugging
-    private void consumePurchase(String sku) {
+    public void consumePurchase(String sku) {
         for (final PurchaseInfo info : mPurchaseInfo.values()) {
             if (info.key.equals(sku)) {
                 if (info.token != null) {
@@ -1603,14 +1592,14 @@ public class GoogleHelper {
         PublicKey publicKey = generatePublicKey(decode(mBillingPublicKey));
         if (publicKey != null) {
             if (verify(publicKey, signedData, signature)) {
-                log("Signature is valid. Pro is purchased");
+                log(BILLING, "Signature is valid. Pro is purchased");
                 info.token = purchase.getPurchaseToken();
                 setPurchaseStatus(key, INT_STATUS_PURCHASE_ON);
                 if (!purchase.isAcknowledged()) {
                     acknowledgePurchase(purchase);
                 }
             } else {
-                log("Signature is invalid. Assume pro is off");
+                log(BILLING, "Signature is invalid. Assume pro is off");
                 // if the signature fails, something weird has probably happened
                 info.token = null;
                 setPurchaseStatus(key, INT_STATUS_PURCHASE_OFF);

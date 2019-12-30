@@ -63,6 +63,14 @@
         tools:ignore="HardcodedText" />
 
     <Button
+        android:id="@+id/main_start_purchase"
+        app:layout_constraintBottom_toTopOf="@id/main_clear_consent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Start Purchase (5)"
+        tools:ignore="HardcodedText" />
+
+    <Button
         android:id="@+id/main_clear_consent"
         app:layout_constraintBottom_toTopOf="@id/main_consume"
         android:layout_width="match_parent"

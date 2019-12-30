@@ -79,8 +79,6 @@ import java.util.Map;
 import java.util.Random;
 
 public class GoogleHelper {
-    // TODO pending transactions
-
     // region Initialisation and Constants
     private static final String SETTINGS_KEY_PURCHASE = "_ps.";
     private static final String SETTINGS_KEY_ADS = "_a";
@@ -456,17 +454,38 @@ public class GoogleHelper {
     public static final int PURCHASE_ENABLED = 0;
     public static final int PURCHASE_DISABLED = 1;
     public static final int PURCHASE_NOT_YET_KNOWN = 2;
-    public static final int PURCHASE_PENDING = 3;
 
     @IntDef(
             value = {
                     PURCHASE_ENABLED,
                     PURCHASE_DISABLED,
                     PURCHASE_NOT_YET_KNOWN,
-                    PURCHASE_PENDING
+            })
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface PurchaseStatusFull {
+    }
+
+    @IntDef(
+            value = {
+                    PURCHASE_ENABLED,
+                    PURCHASE_DISABLED,
             })
     @Retention(RetentionPolicy.SOURCE)
     public @interface PurchaseStatus {
+    }
+
+    public static final int PURCHASE_BENEFIT_OF_DOUBT = 1;
+    public static final int PURCHASE_CARE_ABOUT_WAITING = 1 << 1;
+    @IntDef(
+            flag = true,
+            value = {
+                    PURCHASE_BENEFIT_OF_DOUBT,
+                    PURCHASE_CARE_ABOUT_WAITING
+            }
+    )
+    @Retention(RetentionPolicy.SOURCE)
+    @interface PurchaseRequestFlags {
+
     }
 
     public void setHoldingView(View waitView) {
@@ -493,20 +512,29 @@ public class GoogleHelper {
     }
 
     @PurchaseStatus
-    public int getPurchaseStatus(String key, boolean benefitOfTheDoubt) {
-        // TODO need to consider pending and not yet known
-        // Pending is "off" - can't see any reason it would be anything else
+    public int getPurchaseStatus(String key) {
+        if (getPurchaseStatus(key, 0) == PURCHASE_ENABLED) {
+            return PURCHASE_ENABLED;
+        }
+        return PURCHASE_DISABLED;
+    }
+
+    @PurchaseStatusFull
+    public int getPurchaseStatus(String key, @PurchaseRequestFlags int flags) {
         PurchaseInfo info = mPurchaseInfo.get(key);
         boolean allOff = true;
+        boolean anyWaiting = false;
         assert info != null;
         switch (info.status) {
             case INT_STATUS_PURCHASE_ON:
                 return PURCHASE_ENABLED;
             case INT_STATUS_PURCHASE_OFF:
+            case INT_STATUS_PURCHASE_PENDING: // pending is a known state
                 // do nothing
                 break;
             case INT_STATUS_PURCHASE_INIT:
             case INT_STATUS_PURCHASE_NOTHING:
+                anyWaiting = true;
             case INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT:
             case INT_STATUS_PURCHASE_UNKNOWN:
             default:
@@ -520,21 +548,28 @@ public class GoogleHelper {
                 case INT_STATUS_PURCHASE_ON:
                     return PURCHASE_ENABLED;
                 case INT_STATUS_PURCHASE_OFF:
+                case INT_STATUS_PURCHASE_PENDING: // pending is a known state
                     // do nothing
                     // if all off is already true, keep it that way
                     break;
                 case INT_STATUS_PURCHASE_INIT:
                 case INT_STATUS_PURCHASE_NOTHING:
+                    anyWaiting = true;
                 case INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT:
                 case INT_STATUS_PURCHASE_UNKNOWN:
                     allOff = false;
                     break;
             }
         }
+        if ((flags & PURCHASE_CARE_ABOUT_WAITING) != 0) {
+            if (anyWaiting) {
+                return PURCHASE_NOT_YET_KNOWN;
+            }
+        }
         if (allOff) {
             return PURCHASE_DISABLED;
         } else {
-            return benefitOfTheDoubt ? PURCHASE_ENABLED : PURCHASE_DISABLED;
+            return (flags & PURCHASE_BENEFIT_OF_DOUBT) != 0 ? PURCHASE_ENABLED : PURCHASE_DISABLED;
         }
     }
 
@@ -1877,12 +1912,10 @@ public class GoogleHelper {
     private void updateSettingVisibility() {
         for (PurchaseInfo info : mPurchaseInfo.values()) {
             if (info.preference != null) {
-                @PurchaseStatus int status = getPurchaseStatus(info.key, false);
+                @PurchaseStatus int status = getPurchaseStatus(info.key);
                 info.preference.setOnPreferenceClickListener(mPurchasePrefClick);
                 switch (status) {
                     case PURCHASE_DISABLED:
-                    case PURCHASE_NOT_YET_KNOWN:
-                    case PURCHASE_PENDING:
                         info.preference.setVisible(true);
                         info.preference.setEnabled(true);
                         if (TextUtils.isEmpty(info.priceString)) {

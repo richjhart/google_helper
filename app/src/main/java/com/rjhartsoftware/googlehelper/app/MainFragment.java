@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment;
 
 import com.rjhartsoftware.fragments.FragmentTransactions;
 import com.rjhartsoftware.googlehelper.GoogleHelper;
+import com.rjhartsoftware.logcatdebug.D;
 
 public class MainFragment extends Fragment implements View.OnClickListener, GoogleHelper.PurchaseStatusChangeListener {
     public static final String TAG = "_main";
@@ -25,6 +26,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, Goog
         v.findViewById(R.id.main_settings).setOnClickListener(this);
         v.findViewById(R.id.main_consume).setOnClickListener(this);
         v.findViewById(R.id.main_clear_consent).setOnClickListener(this);
+        v.findViewById(R.id.main_start_purchase).setOnClickListener(this);
 
         GoogleHelper.getInstance().registerPurchaseChangeListener(this);
         updateStatus(v);
@@ -64,6 +66,11 @@ public class MainFragment extends Fragment implements View.OnClickListener, Goog
             case R.id.main_clear_consent:
                 GoogleHelper.getInstance().clearConsent();
                 break;
+            case R.id.main_start_purchase:
+                if (GoogleHelper.getInstance().startPurchase("purchase_5")) {
+                    D.log(D.GENERAL, "Purchase started");
+                }
+                break;
         }
 
     }
@@ -81,20 +88,21 @@ public class MainFragment extends Fragment implements View.OnClickListener, Goog
             return;
         }
         ((CheckBox)view.findViewById(R.id.main_purchase_status_1)).setChecked(
-                GoogleHelper.getInstance().getPurchaseStatus("purchase_1", true) == GoogleHelper.PURCHASE_ENABLED
+                GoogleHelper.getInstance().getPurchaseStatus("purchase_1") == GoogleHelper.PURCHASE_ENABLED
         );
         ((CheckBox)view.findViewById(R.id.main_purchase_status_2)).setChecked(
-                GoogleHelper.getInstance().getPurchaseStatus("purchase_2", true) == GoogleHelper.PURCHASE_ENABLED
+                GoogleHelper.getInstance().getPurchaseStatus("purchase_2") == GoogleHelper.PURCHASE_ENABLED
         );
         ((CheckBox)view.findViewById(R.id.main_purchase_status_3)).setChecked(
-                GoogleHelper.getInstance().getPurchaseStatus("purchase_3", true) == GoogleHelper.PURCHASE_ENABLED
+                GoogleHelper.getInstance().getPurchaseStatus("purchase_3") != GoogleHelper.PURCHASE_DISABLED
         );
-        @GoogleHelper.PurchaseStatus int p4 = GoogleHelper.getInstance().getPurchaseStatus("purchase_4", true);
+        @GoogleHelper.PurchaseStatus int p4 = GoogleHelper.getInstance().getPurchaseStatus("purchase_4");
         ((CheckBox)view.findViewById(R.id.main_purchase_status_4)).setChecked(
                  GoogleHelper.PURCHASE_ENABLED == p4
         );
+        @GoogleHelper.PurchaseStatusFull int p5 = GoogleHelper.getInstance().getPurchaseStatus("purchase_5", GoogleHelper.PURCHASE_BENEFIT_OF_DOUBT & GoogleHelper.PURCHASE_CARE_ABOUT_WAITING);
         ((CheckBox)view.findViewById(R.id.main_purchase_status_5)).setChecked(
-                GoogleHelper.getInstance().getPurchaseStatus("purchase_5", true) != GoogleHelper.PURCHASE_DISABLED
+                 GoogleHelper.PURCHASE_ENABLED == p5 || GoogleHelper.PURCHASE_NOT_YET_KNOWN == p5
         );
     }
 }

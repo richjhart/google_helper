@@ -44,6 +44,7 @@ import com.google.ads.mediation.admob.AdMobAdapter;
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -76,7 +77,6 @@ import java.util.Random;
 
 public class GoogleHelper {
     // TODO pending transactions
-    // TODO initialise ads here
     // TODO handle remote config?
     // region Initialisation and Constants
     private static final String SETTINGS_KEY_PURCHASE = "_ps.";
@@ -139,7 +139,8 @@ public class GoogleHelper {
     }
 
     @SuppressWarnings("ConstantConditions")
-    public GoogleHelper setRemovesAds(String key) {
+    public GoogleHelper setRemovesAds(String key, String publisher) {
+        MobileAds.initialize(mContext, publisher);
         mPurchaseInfo.get(key).removesAds = true;
         for (String otherKey : mPurchaseInfo.get(key).otherKeys) {
             mPurchaseInfo.get(otherKey).removesAds = true;

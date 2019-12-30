@@ -33,7 +33,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         D.init(BuildConfig.VERSION_NAME, BuildConfig.DEBUG);
-        MobileAds.initialize(this, "ca-app-pub-4750446129557325~1422975651");
         super.onCreate(savedInstanceState);
         GoogleHelper
                 .init(this, BILLING_PUBLIC_KEY)
@@ -43,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
                 .addPurchaseInfo("purchase_4", "purchase_5")
                 .addPurchaseInfo("purchase_5")
                 .setConsentPurchase("purchase_2")
-                .setRemovesAds("purchase_1")
+                .setRemovesAds("purchase_1", "ca-app-pub-4750446129557325~1422975651")
                 .start();
 
         setContentView(R.layout.activity_main);

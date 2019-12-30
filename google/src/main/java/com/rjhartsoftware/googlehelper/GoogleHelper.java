@@ -258,6 +258,10 @@ public class GoogleHelper {
     @interface DebugInfoReason {
     }
 
+    public static void reportDebugInfo(int code, @DebugInfoReason int reason) {
+        reportDebugInfo(code, reason, (Long)null, null);
+    }
+
     public static void reportDebugInfo(int code, @DebugInfoReason int reason, Integer extraCode, Object extraData) {
         reportDebugInfo('g', code, reason, (long) extraCode, extraData);
     }

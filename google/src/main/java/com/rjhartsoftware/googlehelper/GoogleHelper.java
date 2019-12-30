@@ -75,6 +75,9 @@ import java.util.Map;
 import java.util.Random;
 
 public class GoogleHelper {
+    // TODO pending transactions
+    // TODO initialise ads here
+    // TODO handle remote config?
     // region Initialisation and Constants
     private static final String SETTINGS_KEY_PURCHASE = "_ps.";
     private static final String SETTINGS_KEY_ADS = "_a";
@@ -253,10 +256,14 @@ public class GoogleHelper {
     }
 
     public static void reportDebugInfo(int code, @DebugInfoReason int reason, Integer extraCode, Object extraData) {
-        reportDebugInfo('o', code, reason, extraCode, extraData);
+        reportDebugInfo('g', code, reason, (long)extraCode, extraData);
     }
 
-    private static void reportDebugInfo(char type, int code, @DebugInfoReason int reason, Integer extraCode, Object extraData) {
+    public static void reportDebugInfo(int code, @DebugInfoReason int reason, Long extraCode, Object extraData) {
+        reportDebugInfo('g', code, reason, extraCode, extraData);
+    }
+
+    private static void reportDebugInfo(char type, int code, @DebugInfoReason int reason, Long extraCode, Object extraData) {
         D.log(ANALYTICS, "Reporting debug info: " + code); //NON-NLS
         Bundle details = new Bundle();
         char c_reason = '-';
@@ -1360,7 +1367,7 @@ public class GoogleHelper {
                             setPurchaseStatus(info.key, INT_STATUS_PURCHASE_UNKNOWN);
                         }
                     }
-                    reportDebugInfo('b', BILLING_SETUP_ERROR_BASE, ANALYTICS_STATUS_WARNING, billingResult.getResponseCode(), null);
+                    reportDebugInfo('b', BILLING_SETUP_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) billingResult.getResponseCode(), null);
                 }
             }
 
@@ -1434,7 +1441,7 @@ public class GoogleHelper {
                     for (PurchaseInfo info : mPurchaseInfo.values()) {
                         setPurchaseStatus(info.key, INT_STATUS_PURCHASE_UNKNOWN);
                     }
-                    reportDebugInfo('b', BILLING_QUERY_ERROR_BASE, ANALYTICS_STATUS_WARNING, purchasesResult.getResponseCode(), null);
+                    reportDebugInfo('b', BILLING_QUERY_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) purchasesResult.getResponseCode(), null);
                 }
             }
         };
@@ -1481,7 +1488,7 @@ public class GoogleHelper {
                             reportDebugInfo('b', BILLING_QUERY_PRODUCT_NOT_FOUND, ANALYTICS_STATUS_ERROR, null, null);
                         } else {
                             log(BILLING, "Error getting sku details: " + billingResult.getResponseCode()); //NON-NLS
-                            reportDebugInfo('b', BILLING_QUERY_PRODUCT_ERROR_BASE, ANALYTICS_STATUS_WARNING, billingResult.getResponseCode(), null);
+                            reportDebugInfo('b', BILLING_QUERY_PRODUCT_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) billingResult.getResponseCode(), null);
                         }
                     }
                 });
@@ -1529,7 +1536,7 @@ public class GoogleHelper {
                         }
                     } else {
                         log(BILLING, "Error starting purchase flow");
-                        reportDebugInfo('b', BILLING_PURCHASE_START_ERROR_BASE, ANALYTICS_STATUS_WARNING, result.getResponseCode(), null);
+                        reportDebugInfo('b', BILLING_PURCHASE_START_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) result.getResponseCode(), null);
                     }
                     if (result.getResponseCode() == BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED) {
                         log(BILLING, "Item already owned - verify the purchase");
@@ -1582,7 +1589,7 @@ public class GoogleHelper {
                 default:
                     log(BILLING, "onPurchasesUpdated() got unknown resultCode: " + result.getDebugMessage()); //NON-NLS
 
-                    reportDebugInfo('b', BILLING_PURCHASE_UPDATE_ERROR_BASE, ANALYTICS_STATUS_WARNING, result.getResponseCode(), null);
+                    reportDebugInfo('b', BILLING_PURCHASE_UPDATE_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) result.getResponseCode(), null);
                     for (PurchaseInfo info : mPurchaseInfo.values()) {
                         if (info.consentPurchase && info.status == INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT) {
                             log(ADS, "Unknown result from purchase. Something has gone wrong. Hide ads");
@@ -1691,9 +1698,9 @@ public class GoogleHelper {
                             case BillingClient.BillingResponseCode.SERVICE_DISCONNECTED:
                             case BillingClient.BillingResponseCode.SERVICE_TIMEOUT:
                             case BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE:
-                                reportDebugInfo('b', BILLING_PURCHASE_ACK_ERROR, ANALYTICS_STATUS_WARNING, billingResult.getResponseCode(), billingResult.getDebugMessage());
+                                reportDebugInfo('b', BILLING_PURCHASE_ACK_ERROR, ANALYTICS_STATUS_WARNING, (long) billingResult.getResponseCode(), billingResult.getDebugMessage());
                             default:
-                                reportDebugInfo('b', BILLING_PURCHASE_ACK_ERROR, ANALYTICS_STATUS_ERROR, billingResult.getResponseCode(), billingResult.getDebugMessage());
+                                reportDebugInfo('b', BILLING_PURCHASE_ACK_ERROR, ANALYTICS_STATUS_ERROR, (long) billingResult.getResponseCode(), billingResult.getDebugMessage());
                         }
                     }
                 });
@@ -1728,7 +1735,7 @@ public class GoogleHelper {
             signatureAlgorithm.initVerify(publicKey);
             signatureAlgorithm.update(signedData.getBytes());
             if (!signatureAlgorithm.verify(signatureBytes)) {
-                reportDebugInfo(BILLING_VERIFY_ERROR_VERIFY_FAILED, ANALYTICS_STATUS_ERROR, null, null);
+                reportDebugInfo(BILLING_VERIFY_ERROR_VERIFY_FAILED, ANALYTICS_STATUS_ERROR, (Long)null, null);
                 D.log(BILLING, "Signature verification failed."); //NON-NLS
                 return false;
             }

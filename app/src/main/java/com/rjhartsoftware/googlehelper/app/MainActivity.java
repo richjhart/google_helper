@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         GoogleHelper.reportDebugInfo(ANALYTICS_EVENT, GoogleHelper.ANALYTICS_STATUS_EVENT, 10, "Event");
-        GoogleHelper.reportDebugInfo(ANALYTICS_WARNING, GoogleHelper.ANALYTICS_STATUS_WARNING, 10, "Warning");
+        GoogleHelper.reportDebugInfo(ANALYTICS_WARNING, GoogleHelper.ANALYTICS_STATUS_WARNING, 10L, "Warning");
         GoogleHelper.reportDebugInfo(ANALYTICS_ERROR, GoogleHelper.ANALYTICS_STATUS_ERROR, 10, "Error");
 
         Map<String, Object> items = new HashMap<>();

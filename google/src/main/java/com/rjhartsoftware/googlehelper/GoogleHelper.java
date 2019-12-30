@@ -80,7 +80,6 @@ import java.util.Random;
 
 public class GoogleHelper {
     // TODO pending transactions
-    // TODO handle remote config?
 
     // region Initialisation and Constants
     private static final String SETTINGS_KEY_PURCHASE = "_ps.";
@@ -456,11 +455,15 @@ public class GoogleHelper {
 
     public static final int PURCHASE_ENABLED = 0;
     public static final int PURCHASE_DISABLED = 1;
+    public static final int PURCHASE_NOT_YET_KNOWN = 2;
+    public static final int PURCHASE_PENDING = 3;
 
     @IntDef(
             value = {
                     PURCHASE_ENABLED,
                     PURCHASE_DISABLED,
+                    PURCHASE_NOT_YET_KNOWN,
+                    PURCHASE_PENDING
             })
     @Retention(RetentionPolicy.SOURCE)
     public @interface PurchaseStatus {
@@ -491,6 +494,8 @@ public class GoogleHelper {
 
     @PurchaseStatus
     public int getPurchaseStatus(String key, boolean benefitOfTheDoubt) {
+        // TODO need to consider pending and not yet known
+        // Pending is "off" - can't see any reason it would be anything else
         PurchaseInfo info = mPurchaseInfo.get(key);
         boolean allOff = true;
         assert info != null;
@@ -545,10 +550,12 @@ public class GoogleHelper {
                 if (info.removesAds) {
                     switch (status) {
                         case INT_STATUS_PURCHASE_OFF:
+                        case INT_STATUS_PURCHASE_PENDING: // pending is currently considered to be off
                             switch (info.status) {
                                 case INT_STATUS_PURCHASE_NOTHING:// waiting for one, we can keep waiting
                                 case INT_STATUS_PURCHASE_INIT:// waiting for one, we can keep waiting
                                 case INT_STATUS_PURCHASE_OFF: // both (all) are off. Stay off
+                                case INT_STATUS_PURCHASE_PENDING: // pending is basically the same as off
                                 case INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT: // high priority - set to purchasing
                                 case INT_STATUS_PURCHASE_UNKNOWN: // unknown - give the benefit of the doubt (hide ads)
                                 case INT_STATUS_PURCHASE_ON: // on - high priority
@@ -565,6 +572,7 @@ public class GoogleHelper {
                                     status = info.status;
                                     break;
                                 case INT_STATUS_PURCHASE_OFF:
+                                case INT_STATUS_PURCHASE_PENDING:
                                     // waiting for one - keep waiting
                                     // do nothing
                                     break;
@@ -588,6 +596,7 @@ public class GoogleHelper {
                                     // do nothing
                                     break;
                                 case INT_STATUS_PURCHASE_OFF:
+                                case INT_STATUS_PURCHASE_PENDING:
                                     // keep purchasing
                                     // do nothing
                                     break;
@@ -614,6 +623,7 @@ public class GoogleHelper {
                                 case INT_STATUS_PURCHASE_NOTHING:
                                 case INT_STATUS_PURCHASE_INIT:
                                 case INT_STATUS_PURCHASE_OFF:
+                                case INT_STATUS_PURCHASE_PENDING:
                                 case INT_STATUS_PURCHASE_UNKNOWN:
                                     // already shouldn't be showing ads
                                     // do nothing
@@ -635,6 +645,7 @@ public class GoogleHelper {
                                 case INT_STATUS_PURCHASE_NOTHING:
                                 case INT_STATUS_PURCHASE_INIT:
                                 case INT_STATUS_PURCHASE_OFF:
+                                case INT_STATUS_PURCHASE_PENDING:
                                 case INT_STATUS_PURCHASE_UNKNOWN:
                                 case INT_STATUS_PURCHASE_ON:
                                     // on is already highest priority
@@ -665,6 +676,7 @@ public class GoogleHelper {
         log(ADS, String.format("Updating overall status... Pro is %s. Ads is %s", getPurchaseStatusName(currentPurchaseStatus), getAdsStatusName(mAdsStatus)));
         switch (currentPurchaseStatus) {
             case INT_STATUS_PURCHASE_OFF:
+            case INT_STATUS_PURCHASE_PENDING:
                 switch (mAdsStatus) {
                     case STATUS_ADS_NOTHING:
                     case STATUS_ADS_INIT:
@@ -1133,6 +1145,7 @@ public class GoogleHelper {
                                         // this affects the UI - showing it depends on the pro status
                                         switch (adsPurchaseStatus) {
                                             case INT_STATUS_PURCHASE_OFF:
+                                            case INT_STATUS_PURCHASE_PENDING:
                                                 log(ADS, "Pro is off, so requesting consent");
                                                 D.log(EU_CONSENT, "Attempting to display consent form"); //NON-NLS
                                                 setAdsStatus(STATUS_ADS_REQUESTING_CONSENT);
@@ -1289,20 +1302,7 @@ public class GoogleHelper {
         }
     }
 
-    @IntDef(
-            value = {
-                    INT_STATUS_PURCHASE_INIT,
-                    INT_STATUS_PURCHASE_NOTHING,
-                    INT_STATUS_PURCHASE_UNKNOWN,
-                    INT_STATUS_PURCHASE_OFF,
-                    INT_STATUS_PURCHASE_ON,
-                    INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT
-            })
-    @Retention(RetentionPolicy.SOURCE)
-    @interface StatusPro {
-    }
-
-    private static String getPurchaseStatusName(@StatusPro int status) {
+    private static String getPurchaseStatusName(@InternalPurchaseStatus int status) {
         switch (status) {
             case INT_STATUS_PURCHASE_INIT:
                 return "Initialising";
@@ -1316,6 +1316,8 @@ public class GoogleHelper {
                 return "Purchasing (from ad consent screen)";
             case INT_STATUS_PURCHASE_UNKNOWN:
                 return "Unknown";
+            case INT_STATUS_PURCHASE_PENDING:
+                return "Pending";
         }
         return "N/A";
     }
@@ -1326,6 +1328,7 @@ public class GoogleHelper {
     static final int INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT = 3;
     static final int INT_STATUS_PURCHASE_UNKNOWN = 4;
     static final int INT_STATUS_PURCHASE_ON = 5;
+    static final int INT_STATUS_PURCHASE_PENDING = 6;
 
     @IntDef(
             value = {
@@ -1334,7 +1337,8 @@ public class GoogleHelper {
                     INT_STATUS_PURCHASE_UNKNOWN,
                     INT_STATUS_PURCHASE_OFF,
                     INT_STATUS_PURCHASE_ON,
-                    INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT
+                    INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT,
+                    INT_STATUS_PURCHASE_PENDING,
             })
     @Retention(RetentionPolicy.SOURCE)
     @interface InternalPurchaseStatus {
@@ -1705,9 +1709,20 @@ public class GoogleHelper {
             if (verify(publicKey, signedData, signature)) {
                 log(BILLING, "Signature is valid. Pro is purchased");
                 info.token = purchase.getPurchaseToken();
-                setPurchaseStatus(key, INT_STATUS_PURCHASE_ON);
-                if (!purchase.isAcknowledged()) {
-                    acknowledgePurchase(purchase);
+                switch (purchase.getPurchaseState()) {
+                    case Purchase.PurchaseState
+                            .PURCHASED:
+                        setPurchaseStatus(key, INT_STATUS_PURCHASE_ON);
+                        if (!purchase.isAcknowledged()) {
+                            acknowledgePurchase(purchase);
+                        }
+                        break;
+                    case Purchase.PurchaseState.PENDING:
+                        setPurchaseStatus(key, INT_STATUS_PURCHASE_PENDING);
+                        break;
+                    case Purchase.PurchaseState.UNSPECIFIED_STATE:
+                        setPurchaseStatus(key, INT_STATUS_PURCHASE_UNKNOWN);
+                        break;
                 }
             } else {
                 log(BILLING, "Signature is invalid. Assume pro is off");
@@ -1866,6 +1881,8 @@ public class GoogleHelper {
                 info.preference.setOnPreferenceClickListener(mPurchasePrefClick);
                 switch (status) {
                     case PURCHASE_DISABLED:
+                    case PURCHASE_NOT_YET_KNOWN:
+                    case PURCHASE_PENDING:
                         info.preference.setVisible(true);
                         info.preference.setEnabled(true);
                         if (TextUtils.isEmpty(info.priceString)) {
@@ -1886,6 +1903,7 @@ public class GoogleHelper {
             mPrefGdpr.setOnPreferenceClickListener(mGdprPrefClick);
             switch (getAdsPurchaseStatus()) {
                 case INT_STATUS_PURCHASE_OFF:
+                case INT_STATUS_PURCHASE_PENDING:
                     switch (mAdsStatus) {
                         case STATUS_ADS_ALLOWED_ANONYMOUS:
                             mPrefGdpr.setVisible(true);

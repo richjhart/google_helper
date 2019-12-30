@@ -18,6 +18,7 @@ import android.view.View;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.XmlRes;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceManager;
 
@@ -53,6 +54,8 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings;
 import com.rjhartsoftware.logcatdebug.D;
 
 import java.lang.annotation.Retention;
@@ -78,6 +81,7 @@ import java.util.Random;
 public class GoogleHelper {
     // TODO pending transactions
     // TODO handle remote config?
+
     // region Initialisation and Constants
     private static final String SETTINGS_KEY_PURCHASE = "_ps.";
     private static final String SETTINGS_KEY_ADS = "_a";
@@ -188,13 +192,14 @@ public class GoogleHelper {
     }
     // endregion
 
-    //region Analytics and Firebase
+    //region Firebase: Analytics, Firebase, Remote Config
     private static final D.DebugTag GENERAL = new D.DebugTag("google_general");
     private static final D.DebugTag ANALYTICS = new D.DebugTag("google_analytics");
     private static final D.DebugTag BILLING = new D.DebugTag("google_billing");
     private static final D.DebugTag EU_CONSENT = new D.DebugTag("google_consent");
     private static final D.DebugTag ADS = new D.DebugTag("google_ads");
     private static final D.DebugTag FIRESTORE = new D.DebugTag("google_firestore");
+    private static final D.DebugTag REMOTE_CONFIG = new D.DebugTag("google_remote");
     private static final D.DebugTag VERBOSE = new D.DebugTag("google_verbose", false);
 
     private static DocumentReference sVerboseDoc = null;
@@ -257,7 +262,7 @@ public class GoogleHelper {
     }
 
     public static void reportDebugInfo(int code, @DebugInfoReason int reason, Integer extraCode, Object extraData) {
-        reportDebugInfo('g', code, reason, (long)extraCode, extraData);
+        reportDebugInfo('g', code, reason, (long) extraCode, extraData);
     }
 
     public static void reportDebugInfo(int code, @DebugInfoReason int reason, Long extraCode, Object extraData) {
@@ -372,6 +377,43 @@ public class GoogleHelper {
         }
     }
 
+    private FirebaseRemoteConfig mRemoteConfig;
+
+    public GoogleHelper initRemoteConfig(@XmlRes int initRes) {
+        mRemoteConfig = FirebaseRemoteConfig.getInstance();
+        //noinspection MagicNumber
+        FirebaseRemoteConfigSettings configSettings = new FirebaseRemoteConfigSettings.Builder()
+                .setMinimumFetchIntervalInSeconds(3600)
+                .build();
+        mRemoteConfig.setDefaultsAsync(initRes);
+        mRemoteConfig.setConfigSettingsAsync(configSettings);
+        mRemoteConfig.fetchAndActivate();
+        return this;
+    }
+
+    public long getRemoteLong(String key) {
+        long res = mRemoteConfig.getLong(key);
+        D.log(REMOTE_CONFIG, "Value of %s: %d", key, res); //NON-NLS
+        return res;
+    }
+
+    public String getRemoteString(String key) {
+        String res = mRemoteConfig.getString(key);
+        D.log(REMOTE_CONFIG, "Value of %s: %s", key, res); //NON-NLS
+        return res;
+    }
+
+    public boolean getRemoteBoolean(String key) {
+        boolean res = mRemoteConfig.getBoolean(key);
+        D.log(REMOTE_CONFIG, "Value of %s: %b", key, res); //NON-NLS
+        return res;
+    }
+
+    public double getRemoteDouble(String key) {
+        double res = mRemoteConfig.getDouble(key);
+        D.log(REMOTE_CONFIG, "Value of %s: %f", key, res); //NON-NLS
+        return res;
+    }
     //endregion
 
     //region Main Status and App Visibility
@@ -1736,7 +1778,7 @@ public class GoogleHelper {
             signatureAlgorithm.initVerify(publicKey);
             signatureAlgorithm.update(signedData.getBytes());
             if (!signatureAlgorithm.verify(signatureBytes)) {
-                reportDebugInfo(BILLING_VERIFY_ERROR_VERIFY_FAILED, ANALYTICS_STATUS_ERROR, (Long)null, null);
+                reportDebugInfo(BILLING_VERIFY_ERROR_VERIFY_FAILED, ANALYTICS_STATUS_ERROR, (Long) null, null);
                 D.log(BILLING, "Signature verification failed."); //NON-NLS
                 return false;
             }
@@ -1772,7 +1814,7 @@ public class GoogleHelper {
         return Base64.decode(s, Base64.NO_WRAP);
     }
 
-        // These aren't usually needed
+    // These aren't usually needed
 //        public static String encode(String s) {
 //            return base64Encode(xorWithKey(s.getBytes()));
 //        }

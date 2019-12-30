@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<defaultsMap>
+    <entry>
+        <key>remote_config_int</key>
+        <value>250</value>
+    </entry>
+    <entry>
+        <key>remote_config_string</key>
+        <value>Hello, world!</value>
+    </entry>
+    <entry>
+        <key>remote_config_double</key>
+        <value>1.2</value>
+    </entry>
+    <entry>
+        <key>remote_config_boolean</key>
+        <value>true</value>
+    </entry>
+</defaultsMap>

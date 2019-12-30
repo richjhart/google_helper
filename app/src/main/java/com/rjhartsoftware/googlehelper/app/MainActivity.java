@@ -1,13 +1,11 @@
 package com.rjhartsoftware.googlehelper.app;
 
+import android.os.Bundle;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
-import android.os.Bundle;
-import android.view.View;
-
-import com.google.android.gms.ads.MobileAds;
 import com.rjhartsoftware.fragments.FragmentTransactions;
 import com.rjhartsoftware.googlehelper.GoogleHelper;
 import com.rjhartsoftware.logcatdebug.D;
@@ -43,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
                 .addPurchaseInfo("purchase_5")
                 .setConsentPurchase("purchase_2")
                 .setRemovesAds("purchase_1", "ca-app-pub-4750446129557325~1422975651")
+                .initRemoteConfig(R.xml.remote_config_defaults)
                 .start();
 
         setContentView(R.layout.activity_main);
@@ -79,6 +78,11 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         FragmentTransactions.activityResumed(this);
         GoogleHelper.getInstance().resumeAd();
+
+        D.log(D.GENERAL, "Remote String: %s", GoogleHelper.getInstance().getRemoteString("remote_config_string"));
+        D.log(D.GENERAL, "Remote Boolean: %b", GoogleHelper.getInstance().getRemoteBoolean("remote_config_boolean"));
+        D.log(D.GENERAL, "Remote Double: %f", GoogleHelper.getInstance().getRemoteDouble("remote_config_double"));
+        D.log(D.GENERAL, "Remote Long: %d", GoogleHelper.getInstance().getRemoteLong("remote_config_long"));
     }
 
 

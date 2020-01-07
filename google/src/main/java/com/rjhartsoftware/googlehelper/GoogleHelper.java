@@ -82,6 +82,8 @@ public class GoogleHelper {
     // region Initialisation and Constants
     private static final String SETTINGS_KEY_PURCHASE = "_ps.";
     private static final String SETTINGS_KEY_ADS = "_a";
+    private boolean mPurchaseRegistered = false;
+    private boolean mAdRegistered = false;
 
     private final BroadcastReceiver mNetworkReceiver = new BroadcastReceiver() {
         @Override
@@ -100,6 +102,11 @@ public class GoogleHelper {
     }
 
     public static GoogleHelper getInstance() {
+        return sInstance;
+    }
+
+    public static GoogleHelper init(@NonNull Context context) {
+        sInstance.initO(context);
         return sInstance;
     }
 
@@ -129,10 +136,14 @@ public class GoogleHelper {
     }
 
     public GoogleHelper addPurchaseInfo(String key, String... otherKeys) {
+        if (mBillingPublicKey != null) {
+            mPurchaseRegistered = true;
+        }
         mPurchaseInfo.put(key, new PurchaseInfo(key, otherKeys));
         return this;
     }
 
+    @Deprecated
     public GoogleHelper setConsentPurchase(String key) {
         //noinspection ConstantConditions
         mPurchaseInfo.get(key).consentPurchase = true;
@@ -140,13 +151,19 @@ public class GoogleHelper {
     }
 
     @SuppressWarnings("ConstantConditions")
-    public GoogleHelper setRemovesAds(String key, String publisher) {
+    public GoogleHelper setRemovesAds(String key, String publisher, String consentPurchaseKey) {
         MobileAds.initialize(mContext, publisher);
+        mAdRegistered = true;
         mPurchaseInfo.get(key).removesAds = true;
+        mPurchaseInfo.get(consentPurchaseKey).consentPurchase = true;
         for (String otherKey : mPurchaseInfo.get(key).otherKeys) {
             mPurchaseInfo.get(otherKey).removesAds = true;
         }
         return this;
+    }
+
+    public GoogleHelper setRemovesAds(String key, String publisher) {
+        return setRemovesAds(key, publisher, key);
     }
 
     private void initO(@NonNull Context context) {
@@ -159,23 +176,33 @@ public class GoogleHelper {
         }
         // ConsentInformation.getInstance(context).setDebugGeography(DebugGeography.DEBUG_GEOGRAPHY_EEA);
 
-        mBillingClient = BillingClient.newBuilder(context)
-                .enablePendingPurchases()
-                .setListener(new PurchasesUpdatedListenerCustom())
-                .build();
+        if (mPurchaseRegistered) {
+            mBillingClient = BillingClient.newBuilder(context)
+                    .enablePendingPurchases()
+                    .setListener(new PurchasesUpdatedListenerCustom())
+                    .build();
+        }
 
         updateMainStatus();
-        checkAdConsent();
+        if (mAdRegistered) {
+            checkAdConsent();
+        }
     }
 
     public void start() {
         log(GENERAL, "'Starting'");
-        initialiseBilling();
+        if (mPurchaseRegistered) {
+            initialiseBilling();
+        }
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
         if (mAdsStatus == STATUS_ADS_INIT) {
-            D.log(ADS, "Startup - initialising ads status to saved value");
-            setAdsStatus(prefs.getInt(SETTINGS_KEY_ADS, STATUS_ADS_NOTHING));
+            if (mAdRegistered) {
+                D.log(ADS, "Startup - initialising ads status to saved value");
+                setAdsStatus(prefs.getInt(SETTINGS_KEY_ADS, STATUS_ADS_NOTHING));
+            } else {
+                setAdsStatus(STATUS_ADS_NOT_REGISTERED);
+            }
         }
         for (PurchaseInfo info : mPurchaseInfo.values()) {
             if (info.status == INT_STATUS_PURCHASE_INIT) {
@@ -424,7 +451,8 @@ public class GoogleHelper {
                     STATUS_REQUEST_PAID,
                     STATUS_HIDE_ADS,
                     STATUS_SHOW_ALL_ADS,
-                    STATUS_SHOW_ANONYMOUS_ADS
+                    STATUS_SHOW_ANONYMOUS_ADS,
+                    STATUS_NO_ADS,
             })
     @Retention(RetentionPolicy.SOURCE)
     private @interface Status {
@@ -442,6 +470,8 @@ public class GoogleHelper {
                 return "Show Anonymous";
             case STATUS_WAITING:
                 return "Waiting for status";
+            case STATUS_NO_ADS:
+                return "No Ads registered";
         }
         return "N/A";
     }
@@ -451,6 +481,7 @@ public class GoogleHelper {
     private static final int STATUS_HIDE_ADS = 2;
     private static final int STATUS_SHOW_ALL_ADS = 3;
     private static final int STATUS_SHOW_ANONYMOUS_ADS = 4;
+    private static final int STATUS_NO_ADS = 5;
     @Status
     private int mOverallStatus = STATUS_WAITING;
     private View mHoldingView = null;
@@ -525,6 +556,9 @@ public class GoogleHelper {
 
     @PurchaseStatusFull
     public int getPurchaseStatus(String key, @PurchaseRequestFlags int flags) {
+        if (!mPurchaseRegistered || !mPurchaseInfo.containsKey(key)) {
+            return PURCHASE_DISABLED;
+        }
         PurchaseInfo info = mPurchaseInfo.get(key);
         boolean allOff = true;
         boolean anyWaiting = false;
@@ -541,6 +575,7 @@ public class GoogleHelper {
                 anyWaiting = true;
             case INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT:
             case INT_STATUS_PURCHASE_UNKNOWN:
+            case INT_STATUS_PURCHASE_NONE_REGISTERED:
             default:
                 allOff = false;
                 break;
@@ -561,6 +596,7 @@ public class GoogleHelper {
                     anyWaiting = true;
                 case INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT:
                 case INT_STATUS_PURCHASE_UNKNOWN:
+                case INT_STATUS_PURCHASE_NONE_REGISTERED:
                     allOff = false;
                     break;
             }
@@ -579,6 +615,9 @@ public class GoogleHelper {
 
     @InternalPurchaseStatus
     private int getAdsPurchaseStatus() {
+        if (!mAdRegistered) {
+            return INT_STATUS_PURCHASE_NONE_REGISTERED;
+        }
         @InternalPurchaseStatus int status = INT_STATUS_PURCHASE_NOTHING;
         boolean first = true;
         for (PurchaseInfo info : mPurchaseInfo.values()) {
@@ -598,6 +637,7 @@ public class GoogleHelper {
                                 case INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT: // high priority - set to purchasing
                                 case INT_STATUS_PURCHASE_UNKNOWN: // unknown - give the benefit of the doubt (hide ads)
                                 case INT_STATUS_PURCHASE_ON: // on - high priority
+                                case INT_STATUS_PURCHASE_NONE_REGISTERED: // should never happen
                                     status = info.status;
                                     break;
                             }
@@ -620,6 +660,7 @@ public class GoogleHelper {
                                     // trust the purchasing one
                                     status = info.status;
                                     break;
+                                case INT_STATUS_PURCHASE_NONE_REGISTERED: // should never happen
                                 case INT_STATUS_PURCHASE_UNKNOWN:
                                     // keep waiting
                                     // do nothing
@@ -655,6 +696,10 @@ public class GoogleHelper {
                                     // however, purchase has started now...
                                     // do nothing
                                     break;
+                                case INT_STATUS_PURCHASE_NONE_REGISTERED:
+                                    // should never happen
+                                    // do nothing
+                                    break;
                             }
                             break;
                         case INT_STATUS_PURCHASE_UNKNOWN:
@@ -677,6 +722,10 @@ public class GoogleHelper {
                                     // on is higher priority, might as well set it
                                     status = info.status;
                                     break;
+                                case INT_STATUS_PURCHASE_NONE_REGISTERED:
+                                    // should never happen
+                                    // do nothing
+                                    break;
                             }
                             break;
                         case INT_STATUS_PURCHASE_ON:
@@ -695,7 +744,15 @@ public class GoogleHelper {
                                     reportDebugInfo('c', CONSENT_ERROR_ASKED_WITH_PURCHASE_ON, ANALYTICS_STATUS_ERROR, null, null);
                                     // however, purchase has started now...
                                     status = info.status;
+                                case INT_STATUS_PURCHASE_NONE_REGISTERED:
+                                    // should never happen
+                                    // do nothing
+                                    break;
                             }
+                            break;
+                        case INT_STATUS_PURCHASE_NONE_REGISTERED:
+                            // should never happen
+                            // do nothing
                             break;
                     }
                 }
@@ -746,6 +803,10 @@ public class GoogleHelper {
                         log(ADS, "Consent status is not known - check it now");
                         checkAdConsent();
                         break;
+                    case STATUS_ADS_NOT_REGISTERED:
+                        // should never happen
+                        // do nothing
+                        break;
                     case STATUS_ADS_CONSENT_FAILED:
                     case STATUS_ADS_UNKNOWN:
                     case STATUS_ADS_CONSENT_TIMED_OUT:
@@ -771,6 +832,9 @@ public class GoogleHelper {
                 // never show ads in the pro version, and consent doesn't matter
                 log(ADS, "Running Pro - consent doesn't matter. Hide ads");
                 // deliberate fall-through
+            case INT_STATUS_PURCHASE_NONE_REGISTERED:
+                setStatus(STATUS_NO_ADS);
+                break;
             case INT_STATUS_PURCHASE_UNKNOWN:
             default:
                 log(ADS, "Pro or error getting pro - consent doesn't matter. Hide ads");
@@ -796,6 +860,7 @@ public class GoogleHelper {
                 case GoogleHelper.STATUS_HIDE_ADS:
                 case GoogleHelper.STATUS_SHOW_ALL_ADS:
                 case GoogleHelper.STATUS_SHOW_ANONYMOUS_ADS:
+                case STATUS_NO_ADS:
                 default:
                     // show the UI
                     log(EU_CONSENT, "Showing the UI");
@@ -826,7 +891,7 @@ public class GoogleHelper {
     private boolean mRequestingAd = false;
 
     public void registerAdView(@Nullable View adView) {
-        if (adView instanceof AdView) {
+        if (mAdRegistered && adView instanceof AdView) {
             log(ADS, "Successfully registering Ad Fragment: " + adView); //NON-NLS
             if (mAdView != adView && mAdView != null) {
                 log(ADS, "Hiding previous adView"); //NON-NLS
@@ -908,6 +973,7 @@ public class GoogleHelper {
             case STATUS_WAITING:
             case STATUS_REQUEST_PAID:
             case STATUS_HIDE_ADS:
+            case STATUS_NO_ADS:
             default:
                 mRequestingAd = false;
                 hideAds();
@@ -943,7 +1009,7 @@ public class GoogleHelper {
 
     private void hideAds() {
         log(ADS, "Hiding ads"); //NON-NLS
-        if (mAdView != null) {
+        if (mAdRegistered && mAdView != null) {
             mAdView.pause();
             mAdView.setVisibility(View.GONE);
         }
@@ -964,7 +1030,8 @@ public class GoogleHelper {
                     STATUS_ADS_REQUESTING_CONSENT,
                     STATUS_ADS_CONSENT_UNKNOWN,
                     STATUS_ADS_CONSENT_FAILED,
-                    STATUS_ADS_CONSENT_TIMED_OUT
+                    STATUS_ADS_CONSENT_TIMED_OUT,
+                    STATUS_ADS_NOT_REGISTERED,
             })
     @Retention(RetentionPolicy.SOURCE)
     @interface StatusAds {
@@ -994,6 +1061,8 @@ public class GoogleHelper {
                 return "Consent determination has failed";
             case STATUS_ADS_CONSENT_TIMED_OUT:
                 return "Consent status has timed out";
+            case STATUS_ADS_NOT_REGISTERED:
+                return "No Ads registered";
         }
         return "N/A";
     }
@@ -1012,6 +1081,7 @@ public class GoogleHelper {
     private static final int STATUS_ADS_CONSENT_UNKNOWN = 7;
     private static final int STATUS_ADS_CONSENT_FAILED = 8;
     private static final int STATUS_ADS_CONSENT_TIMED_OUT = 9;
+    private static final int STATUS_ADS_NOT_REGISTERED = 10;
 
     private final Handler mHandler = new Handler();
     private final Runnable mConsentTimedOut = new Runnable() {
@@ -1056,12 +1126,16 @@ public class GoogleHelper {
             case GoogleHelper.STATUS_ADS_NOTHING:
             case GoogleHelper.STATUS_ADS_PREFER_PAID:
             case GoogleHelper.STATUS_ADS_REQUESTING_CONSENT:
+            case STATUS_ADS_NOT_REGISTERED:
                 // do nothing
                 break;
         }
     }
 
     private void checkAdConsent() {
+        if (!mAdRegistered) {
+            return;
+        }
         log(EU_CONSENT, "Checking for existing consent status"); //NON-NLS
         ConsentInformation consentInformation = ConsentInformation.getInstance(mContext);
         String[] publisherIds = {mContext.getString(R.string.ads_publisher_id)};
@@ -1137,6 +1211,9 @@ public class GoogleHelper {
     }
 
     public void clearConsent() {
+        if (!mAdRegistered) {
+            return;
+        }
         log(ADS, "Consent has been cleared");
         ConsentInformation consentInformation = ConsentInformation.getInstance(mContext);
         consentInformation.setConsentStatus(ConsentStatus.UNKNOWN);
@@ -1148,6 +1225,9 @@ public class GoogleHelper {
     private boolean mConsentFormShowing = false;
 
     private void requestConsent() {
+        if (!mAdRegistered) {
+            return;
+        }
         // note: the form is prepared regardless of the pro status
         // it's only at the point of showing it that we might stop
         log(EU_CONSENT, "Requesting consent from user");
@@ -1357,6 +1437,8 @@ public class GoogleHelper {
                 return "Unknown";
             case INT_STATUS_PURCHASE_PENDING:
                 return "Pending";
+            case INT_STATUS_PURCHASE_NONE_REGISTERED:
+                return "No purchases Registered";
         }
         return "N/A";
     }
@@ -1368,6 +1450,7 @@ public class GoogleHelper {
     static final int INT_STATUS_PURCHASE_UNKNOWN = 4;
     static final int INT_STATUS_PURCHASE_ON = 5;
     static final int INT_STATUS_PURCHASE_PENDING = 6;
+    static final int INT_STATUS_PURCHASE_NONE_REGISTERED = 7;
 
     @IntDef(
             value = {
@@ -1378,12 +1461,16 @@ public class GoogleHelper {
                     INT_STATUS_PURCHASE_ON,
                     INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT,
                     INT_STATUS_PURCHASE_PENDING,
+                    INT_STATUS_PURCHASE_NONE_REGISTERED,
             })
     @Retention(RetentionPolicy.SOURCE)
     @interface InternalPurchaseStatus {
     }
 
     private void setPurchaseStatus(String key, @InternalPurchaseStatus int status) {
+        if (!mPurchaseInfo.containsKey(key)) {
+            return;
+        }
         PurchaseInfo info = mPurchaseInfo.get(key);
         assert info != null;
         D.log(BILLING, String.format(Locale.US, "Updating purchase status for %s from %s to %s", key, getPurchaseStatusName(info.status), getPurchaseStatusName(status))); //NON-NLS
@@ -1405,70 +1492,76 @@ public class GoogleHelper {
 
     private BillingClient mBillingClient;
     private boolean mIsServiceConnected = false;
-    private String mBillingPublicKey;
+    private String mBillingPublicKey = null;
 
     private void setBillingPublicKey(String key) {
         mBillingPublicKey = key;
     }
 
     private void initialiseBilling() {
-        log(BILLING, "Initialise billing");
-        startServiceConnection(new Runnable() {
-            @Override
-            public void run() {
-                // IAB is fully set up. Now, let's get an inventory of stuff we own.
-                log(BILLING, "Setup successful. Querying inventory."); //NON-NLS
-                queryPurchases();
-                queryProducts();
-            }
-        });
+        if (mPurchaseRegistered) {
+            log(BILLING, "Initialise billing");
+            startServiceConnection(new Runnable() {
+                @Override
+                public void run() {
+                    // IAB is fully set up. Now, let's get an inventory of stuff we own.
+                    log(BILLING, "Setup successful. Querying inventory."); //NON-NLS
+                    queryPurchases();
+                    queryProducts();
+                }
+            });
+        }
     }
 
     private void executeServiceRequest(Runnable runnable) {
-        log(BILLING, "Requesting service request (Google action)");
-        if (mIsServiceConnected) {
-            log(BILLING, "Ready to run - running immediately");
-            runnable.run();
-        } else {
-            log(BILLING, "Not ready to run - restarting service connection");
-            startServiceConnection(runnable);
+        if (mPurchaseRegistered) {
+            log(BILLING, "Requesting service request (Google action)");
+            if (mIsServiceConnected) {
+                log(BILLING, "Ready to run - running immediately");
+                runnable.run();
+            } else {
+                log(BILLING, "Not ready to run - restarting service connection");
+                startServiceConnection(runnable);
+            }
         }
     }
 
     private void startServiceConnection(final Runnable executeOnSuccess) {
-        mBillingClient.startConnection(new BillingClientStateListener() {
-            @Override
-            public void onBillingSetupFinished(BillingResult billingResult) {
-                log(BILLING, "Setup finished. Response code: " + getBillingResponseString(billingResult.getResponseCode())); //NON-NLS
-                if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                    log(BILLING, "Billing setup worked. Check for pro status");
-                    mIsServiceConnected = true;
-                    if (executeOnSuccess != null) {
-                        executeOnSuccess.run();
+        if (mPurchaseRegistered) {
+            mBillingClient.startConnection(new BillingClientStateListener() {
+                @Override
+                public void onBillingSetupFinished(BillingResult billingResult) {
+                    log(BILLING, "Setup finished. Response code: " + getBillingResponseString(billingResult.getResponseCode())); //NON-NLS
+                    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                        log(BILLING, "Billing setup worked. Check for pro status");
+                        mIsServiceConnected = true;
+                        if (executeOnSuccess != null) {
+                            executeOnSuccess.run();
+                        }
+                    } else {
+                        log(BILLING, "Billing failed. Set to unknown if not already set");
+                        for (PurchaseInfo info : mPurchaseInfo.values()) {
+                            if (info.status == INT_STATUS_PURCHASE_INIT || info.status == INT_STATUS_PURCHASE_NOTHING) {
+                                setPurchaseStatus(info.key, INT_STATUS_PURCHASE_UNKNOWN);
+                            }
+                        }
+                        reportDebugInfo('b', BILLING_SETUP_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) billingResult.getResponseCode(), null);
                     }
-                } else {
-                    log(BILLING, "Billing failed. Set to unknown if not already set");
+                }
+
+                @Override
+                public void onBillingServiceDisconnected() {
+                    log(BILLING, "Billing service has disconnected");
+                    mIsServiceConnected = false;
                     for (PurchaseInfo info : mPurchaseInfo.values()) {
                         if (info.status == INT_STATUS_PURCHASE_INIT || info.status == INT_STATUS_PURCHASE_NOTHING) {
                             setPurchaseStatus(info.key, INT_STATUS_PURCHASE_UNKNOWN);
                         }
                     }
-                    reportDebugInfo('b', BILLING_SETUP_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) billingResult.getResponseCode(), null);
+                    reportDebugInfo('b', BILLING_SETUP_DISCONNECTED, ANALYTICS_STATUS_WARNING, null, null);
                 }
-            }
-
-            @Override
-            public void onBillingServiceDisconnected() {
-                log(BILLING, "Billing service has disconnected");
-                mIsServiceConnected = false;
-                for (PurchaseInfo info : mPurchaseInfo.values()) {
-                    if (info.status == INT_STATUS_PURCHASE_INIT || info.status == INT_STATUS_PURCHASE_NOTHING) {
-                        setPurchaseStatus(info.key, INT_STATUS_PURCHASE_UNKNOWN);
-                    }
-                }
-                reportDebugInfo('b', BILLING_SETUP_DISCONNECTED, ANALYTICS_STATUS_WARNING, null, null);
-            }
-        });
+            });
+        }
     }
 
     private static String getBillingResponseString(@BillingClient.BillingResponseCode int billingResponseCode) {
@@ -1500,87 +1593,91 @@ public class GoogleHelper {
     }
 
     private void queryPurchases() {
-        log(BILLING, "Querying purchases");
-        Runnable queryToExecute = new Runnable() {
-            @Override
-            public void run() {
-                log(BILLING, "Running purchases query");
-                long time = System.currentTimeMillis();
-                Purchase.PurchasesResult purchasesResult = mBillingClient.queryPurchases(BillingClient.SkuType.INAPP);
-                D.log(BILLING, "Querying purchases elapsed time: " + (System.currentTimeMillis() - time) + "ms"); //NON-NLS
-                if (purchasesResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                    for (PurchaseInfo info : mPurchaseInfo.values()) {
-                        boolean purchase_found = false;
-                        for (Purchase purchase : purchasesResult.getPurchasesList()) {
-                            if (info.key.equals(purchase.getSku()) && purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                                verifyValidSignature(info.key, purchase);
-                                purchase_found = true;
-                                break;
+        if (mPurchaseRegistered) {
+            log(BILLING, "Querying purchases");
+            Runnable queryToExecute = new Runnable() {
+                @Override
+                public void run() {
+                    log(BILLING, "Running purchases query");
+                    long time = System.currentTimeMillis();
+                    Purchase.PurchasesResult purchasesResult = mBillingClient.queryPurchases(BillingClient.SkuType.INAPP);
+                    D.log(BILLING, "Querying purchases elapsed time: " + (System.currentTimeMillis() - time) + "ms"); //NON-NLS
+                    if (purchasesResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                        for (PurchaseInfo info : mPurchaseInfo.values()) {
+                            boolean purchase_found = false;
+                            for (Purchase purchase : purchasesResult.getPurchasesList()) {
+                                if (info.key.equals(purchase.getSku()) && purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                                    verifyValidSignature(info.key, purchase);
+                                    purchase_found = true;
+                                    break;
+                                }
+                            }
+                            if (!purchase_found) {
+                                setPurchaseStatus(info.key, INT_STATUS_PURCHASE_OFF);
                             }
                         }
-                        if (!purchase_found) {
-                            setPurchaseStatus(info.key, INT_STATUS_PURCHASE_OFF);
+                    } else {
+                        log(BILLING, "queryPurchases() got an error response code: " + purchasesResult.getResponseCode()); //NON-NLS
+                        for (PurchaseInfo info : mPurchaseInfo.values()) {
+                            setPurchaseStatus(info.key, INT_STATUS_PURCHASE_UNKNOWN);
                         }
+                        reportDebugInfo('b', BILLING_QUERY_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) purchasesResult.getResponseCode(), null);
                     }
-                } else {
-                    log(BILLING, "queryPurchases() got an error response code: " + purchasesResult.getResponseCode()); //NON-NLS
-                    for (PurchaseInfo info : mPurchaseInfo.values()) {
-                        setPurchaseStatus(info.key, INT_STATUS_PURCHASE_UNKNOWN);
-                    }
-                    reportDebugInfo('b', BILLING_QUERY_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) purchasesResult.getResponseCode(), null);
                 }
-            }
-        };
+            };
 
-        executeServiceRequest(queryToExecute);
+            executeServiceRequest(queryToExecute);
+        }
     }
 
     private void queryProducts() {
-        log(BILLING, "Get product details");
-        Runnable queryToExecute = new Runnable() {
-            @Override
-            public void run() {
-                log(BILLING, "Running product query");
-                List<String> skus = new ArrayList<>();
-                for (PurchaseInfo info : mPurchaseInfo.values()) {
-                    skus.add(info.key);
-                }
-                SkuDetailsParams params = SkuDetailsParams.newBuilder()
-                        .setSkusList(skus)
-                        .setType(BillingClient.SkuType.INAPP)
-                        .build();
-                mBillingClient.querySkuDetailsAsync(params, new SkuDetailsResponseListener() {
-                    @Override
-                    public void onSkuDetailsResponse(BillingResult billingResult, List<SkuDetails> skuDetailsList) {
-                        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK &&
-                                skuDetailsList != null &&
-                                !skuDetailsList.isEmpty()) {
-                            log(BILLING, String.format(Locale.US, "skuDetails: %d %s",  //NON-NLS
-                                    skuDetailsList.get(0).getPriceAmountMicros(), skuDetailsList.get(0).getPriceCurrencyCode()));
-                            for (SkuDetails details : skuDetailsList) {
-                                D.log(BILLING, String.format(Locale.US, "skuDetails for %s: %d %s",  //NON-NLS
-                                        details.getSku(), details.getPriceAmountMicros(), details.getPriceCurrencyCode()));
-                                for (PurchaseInfo info : mPurchaseInfo.values()) {
-                                    if (info.key.equals(details.getSku())) {
-                                        info.priceString = details.getPrice();
-                                        info.skuDetails = details;
-                                        break;
+        if (mPurchaseRegistered) {
+            log(BILLING, "Get product details");
+            Runnable queryToExecute = new Runnable() {
+                @Override
+                public void run() {
+                    log(BILLING, "Running product query");
+                    List<String> skus = new ArrayList<>();
+                    for (PurchaseInfo info : mPurchaseInfo.values()) {
+                        skus.add(info.key);
+                    }
+                    SkuDetailsParams params = SkuDetailsParams.newBuilder()
+                            .setSkusList(skus)
+                            .setType(BillingClient.SkuType.INAPP)
+                            .build();
+                    mBillingClient.querySkuDetailsAsync(params, new SkuDetailsResponseListener() {
+                        @Override
+                        public void onSkuDetailsResponse(BillingResult billingResult, List<SkuDetails> skuDetailsList) {
+                            if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK &&
+                                    skuDetailsList != null &&
+                                    !skuDetailsList.isEmpty()) {
+                                log(BILLING, String.format(Locale.US, "skuDetails: %d %s",  //NON-NLS
+                                        skuDetailsList.get(0).getPriceAmountMicros(), skuDetailsList.get(0).getPriceCurrencyCode()));
+                                for (SkuDetails details : skuDetailsList) {
+                                    D.log(BILLING, String.format(Locale.US, "skuDetails for %s: %d %s",  //NON-NLS
+                                            details.getSku(), details.getPriceAmountMicros(), details.getPriceCurrencyCode()));
+                                    for (PurchaseInfo info : mPurchaseInfo.values()) {
+                                        if (info.key.equals(details.getSku())) {
+                                            info.priceString = details.getPrice();
+                                            info.skuDetails = details;
+                                            break;
+                                        }
                                     }
                                 }
+                                updateSettingVisibility();
+                            } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                                D.log(BILLING, "No purchase types found"); //NON-NLS
+                                reportDebugInfo('b', BILLING_QUERY_PRODUCT_NOT_FOUND, ANALYTICS_STATUS_ERROR, null, null);
+                            } else {
+                                log(BILLING, "Error getting sku details: " + billingResult.getResponseCode()); //NON-NLS
+                                reportDebugInfo('b', BILLING_QUERY_PRODUCT_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) billingResult.getResponseCode(), null);
                             }
-                            updateSettingVisibility();
-                        } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                            D.log(BILLING, "No purchase types found"); //NON-NLS
-                            reportDebugInfo('b', BILLING_QUERY_PRODUCT_NOT_FOUND, ANALYTICS_STATUS_ERROR, null, null);
-                        } else {
-                            log(BILLING, "Error getting sku details: " + billingResult.getResponseCode()); //NON-NLS
-                            reportDebugInfo('b', BILLING_QUERY_PRODUCT_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) billingResult.getResponseCode(), null);
                         }
-                    }
-                });
-            }
-        };
-        executeServiceRequest(queryToExecute);
+                    });
+                }
+            };
+            executeServiceRequest(queryToExecute);
+        }
     }
 
     private boolean startPurchaseFromConsent() {
@@ -1597,41 +1694,43 @@ public class GoogleHelper {
     }
 
     private boolean startPurchase(final String key, final boolean fromConsent) {
-        log(BILLING, "Starting purchase flow"); //NON-NLS
-        final PurchaseInfo info = mPurchaseInfo.get(key);
-        if (info != null && info.skuDetails != null) {
-            Runnable purchaseFlowRequest = new Runnable() {
-                @Override
-                public void run() {
-                    Activity activity = mActivity.get();
-                    if (activity == null) {
-                        log(BILLING, "App is not running - don't try to start the purchase");
-                        return;
-                    }
-                    log(BILLING, "Launching in-app purchase flow."); //NON-NLS
-
-                    BillingFlowParams purchaseParams = BillingFlowParams.newBuilder()
-                            .setSkuDetails(info.skuDetails)
-                            .build();
-                    BillingResult result = mBillingClient.launchBillingFlow(activity, purchaseParams);
-                    if (result.getResponseCode() == BillingClient.BillingResponseCode.OK || result.getResponseCode() == BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED) {
-                        log(BILLING, "Purchase flow started successfully");
-                        if (fromConsent) {
-                            log(BILLING, "Purchasing from consent");
-                            setPurchaseStatus(key, INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT);
+        if (mPurchaseInfo.containsKey(key)) {
+            log(BILLING, "Starting purchase flow"); //NON-NLS
+            final PurchaseInfo info = mPurchaseInfo.get(key);
+            if (info != null && info.skuDetails != null) {
+                Runnable purchaseFlowRequest = new Runnable() {
+                    @Override
+                    public void run() {
+                        Activity activity = mActivity.get();
+                        if (activity == null) {
+                            log(BILLING, "App is not running - don't try to start the purchase");
+                            return;
                         }
-                    } else {
-                        log(BILLING, "Error starting purchase flow");
-                        reportDebugInfo('b', BILLING_PURCHASE_START_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) result.getResponseCode(), null);
+                        log(BILLING, "Launching in-app purchase flow."); //NON-NLS
+
+                        BillingFlowParams purchaseParams = BillingFlowParams.newBuilder()
+                                .setSkuDetails(info.skuDetails)
+                                .build();
+                        BillingResult result = mBillingClient.launchBillingFlow(activity, purchaseParams);
+                        if (result.getResponseCode() == BillingClient.BillingResponseCode.OK || result.getResponseCode() == BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED) {
+                            log(BILLING, "Purchase flow started successfully");
+                            if (fromConsent) {
+                                log(BILLING, "Purchasing from consent");
+                                setPurchaseStatus(key, INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT);
+                            }
+                        } else {
+                            log(BILLING, "Error starting purchase flow");
+                            reportDebugInfo('b', BILLING_PURCHASE_START_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) result.getResponseCode(), null);
+                        }
+                        if (result.getResponseCode() == BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED) {
+                            log(BILLING, "Item already owned - verify the purchase");
+                            queryPurchases();
+                        }
                     }
-                    if (result.getResponseCode() == BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED) {
-                        log(BILLING, "Item already owned - verify the purchase");
-                        queryPurchases();
-                    }
-                }
-            };
-            executeServiceRequest(purchaseFlowRequest);
-            return true;
+                };
+                executeServiceRequest(purchaseFlowRequest);
+                return true;
+            }
         }
         return false;
     }

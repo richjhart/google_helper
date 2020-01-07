@@ -175,24 +175,22 @@ public class GoogleHelper {
             ConsentInformation.getInstance(context).addTestDevice(device);
         }
         // ConsentInformation.getInstance(context).setDebugGeography(DebugGeography.DEBUG_GEOGRAPHY_EEA);
-
-        if (mPurchaseRegistered) {
-            mBillingClient = BillingClient.newBuilder(context)
-                    .enablePendingPurchases()
-                    .setListener(new PurchasesUpdatedListenerCustom())
-                    .build();
-        }
-
-        updateMainStatus();
-        if (mAdRegistered) {
-            checkAdConsent();
-        }
     }
 
     public void start() {
         log(GENERAL, "'Starting'");
         if (mPurchaseRegistered) {
+            if (mBillingClient == null) {
+                mBillingClient = BillingClient.newBuilder(mContext)
+                        .enablePendingPurchases()
+                        .setListener(new PurchasesUpdatedListenerCustom())
+                        .build();
+            }
             initialiseBilling();
+        }
+
+        if (mAdRegistered) {
+            checkAdConsent();
         }
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);

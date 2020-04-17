@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="settings_summary_pro_off_no_price">Tocca per acquistare o per aggiornare se hai già acquistato.</string>
+    <string name="settings_summary_pro_off">Tocca per acquistare (%s) o per aggiornare se hai già acquistato.</string>
+    <string name="settings_summary_pro_on">Già acquistato</string>
+    <string name="settings_summary_gdpr_non_personalised">Mostrando pubblicità non personalizzati. Tocca per cambiare</string>
+    <string name="settings_summary_gdpr_personalised">Mostrando pubblicità personalizzati. Tocca per cambiare</string>
+    <string name="settings_summary_gdpr_unknown">Tocca per selezionare pubblicità personalizzati o non personalizzati</string>
+
+</resources>

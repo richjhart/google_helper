@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="settings_summary_pro_off_no_price">Dotknij, aby kupić lub odśwież, jeśli już kupiłeś.</string>
+    <string name="settings_summary_pro_off">Dotknij, aby kupić (%s) lub odśwież, jeśli już kupiłeś.</string>
+    <string name="settings_summary_pro_on">Już zakupiono</string>
+    <string name="settings_summary_gdpr_non_personalised">Wyświetlanie reklam niespersonalizowanych. Dotknij, aby zmienić</string>
+    <string name="settings_summary_gdpr_personalised">Wyświetlanie reklam spersonalizowanych. Dotknij, aby zmienić</string>
+    <string name="settings_summary_gdpr_unknown">Dotknij, aby wybrać reklamy spersonalizowane lub niespersonalizowane</string>
+
+</resources>

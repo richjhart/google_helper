@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ad_mob_app_id" translatable="false">SET \'ad_mob_app_id\' in resources</string>
+    <string name="app_name" translatable="false">google</string>
+
+    <string name="ads_publisher_id" translatable="false">pub-4750446129557325</string>
+
+</resources>

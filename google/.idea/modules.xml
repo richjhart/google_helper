@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/-1424309752/GoogleHelper.iml" filepath="$PROJECT_DIR$/.idea/modules/-1424309752/GoogleHelper.iml" group="GoogleHelper" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/-441883002/empty.iml" filepath="$PROJECT_DIR$/.idea/modules/-441883002/empty.iml" group="GoogleHelper/empty" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/google.iml" filepath="$PROJECT_DIR$/.idea/google.iml" group="GoogleHelper/google" />
+    </modules>
+  </component>
+</project>

@@ -284,7 +284,7 @@ public class GoogleHelper {
     }
 
     public static void reportDebugInfo(int code, @DebugInfoReason int reason) {
-        reportDebugInfo(code, reason, (Long)null, null);
+        reportDebugInfo(code, reason, (Long) null, null);
     }
 
     public static void reportDebugInfo(int code, @DebugInfoReason int reason, Integer extraCode, Object extraData) {
@@ -349,8 +349,9 @@ public class GoogleHelper {
         }
     }
 
-    private static void log(D.DebugTag tag, String entry) {
-        D.log(tag.indirect(), entry);
+    private static void log(D.DebugTag tag, String entry, Object... params) {
+        String value = String.format(entry, params);
+        D.log(tag.indirect(), value);
         if (D.isLogging(VERBOSE)) {
             try {
                 FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -382,7 +383,7 @@ public class GoogleHelper {
 //                HashMap<String, Object> entryMap = new HashMap<>();
 //                entryMap.put("time", System.currentTimeMillis());
 //                entryMap.put("value", entry);
-                details.put("log", FieldValue.arrayUnion(entry));
+                details.put("log", FieldValue.arrayUnion(value));
                 sVerboseDoc.update(details)
                         .addOnSuccessListener(new OnSuccessListener<Void>() {
                             @Override
@@ -509,6 +510,7 @@ public class GoogleHelper {
 
     public static final int PURCHASE_BENEFIT_OF_DOUBT = 1;
     public static final int PURCHASE_CARE_ABOUT_WAITING = 1 << 1;
+
     @IntDef(
             flag = true,
             value = {
@@ -1262,7 +1264,6 @@ public class GoogleHelper {
                                         // this affects the UI - showing it depends on the pro status
                                         switch (adsPurchaseStatus) {
                                             case INT_STATUS_PURCHASE_OFF:
-                                            case INT_STATUS_PURCHASE_PENDING:
                                                 log(ADS, "Pro is off, so requesting consent");
                                                 D.log(EU_CONSENT, "Attempting to display consent form"); //NON-NLS
                                                 setAdsStatus(STATUS_ADS_REQUESTING_CONSENT);
@@ -1274,6 +1275,8 @@ public class GoogleHelper {
                                                     log(EU_CONSENT, "App has already quit... do nothing"); //NON-NLS
                                                 }
                                                 break;
+                                            case INT_STATUS_PURCHASE_PENDING:
+                                                // don't show ads while a purchase is pending
                                             case INT_STATUS_PURCHASE_ON:
                                                 log(ADS, "Pro is on, so don't request consent");
                                                 D.log(EU_CONSENT, "pro on - we're not showing ads"); //NON-NLS
@@ -1286,6 +1289,7 @@ public class GoogleHelper {
                                             case INT_STATUS_PURCHASE_INIT:
                                             case INT_STATUS_PURCHASE_NOTHING:
                                             case INT_STATUS_PURCHASE_UNKNOWN:
+                                            case INT_STATUS_PURCHASE_NONE_REGISTERED: // should never happen
                                             default:
                                                 // if the pro is determined to be off (i.e later), hide the app
                                                 log(ADS, "pro status not yet known. keep waiting and not setting any ad status yet");
@@ -1608,6 +1612,9 @@ public class GoogleHelper {
                                     verifyValidSignature(info.key, purchase);
                                     purchase_found = true;
                                     break;
+                                } else if (info.key.equals(purchase.getSku()) && purchase.getPurchaseState() == Purchase.PurchaseState.PENDING) {
+                                    setPurchaseStatus(info.key, INT_STATUS_PURCHASE_PENDING);
+                                    purchase_found = true;
                                 }
                             }
                             if (!purchase_found) {
@@ -1733,6 +1740,20 @@ public class GoogleHelper {
         return false;
     }
 
+    private void checkForPurchaseFailedFromConsent(@InternalPurchaseStatus Integer status) {
+        for (PurchaseInfo info : mPurchaseInfo.values()) {
+            if (info.consentPurchase && info.status == INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT) {
+                D.log(BILLING, "Was purchasing from consent. So request consent again");
+                // This should only happen during the purchase flow of the remove ads, so it should be safe
+                setAdsStatus(STATUS_ADS_NOTHING);
+                if (status != null) {
+                    setPurchaseStatus(info.key, status);
+                }
+                checkAdConsent();
+            }
+        }
+    }
+
     private final class PurchasesUpdatedListenerCustom implements PurchasesUpdatedListener {
 
         @Override
@@ -1745,43 +1766,36 @@ public class GoogleHelper {
                         for (PurchaseInfo info : mPurchaseInfo.values()) {
                             for (Purchase purchase : purchases) {
                                 if (info.key.equals(purchase.getSku()) && purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                                    verifyValidSignature(info.key, purchase);
+                                    if (!verifyValidSignature(info.key, purchase)) {
+                                        checkForPurchaseFailedFromConsent(null);
+                                    }
+                                    break;
+                                } else if (info.key.equals(purchase.getSku()) && purchase.getPurchaseState() == Purchase.PurchaseState.PENDING) {
+                                    checkForPurchaseFailedFromConsent(INT_STATUS_PURCHASE_PENDING);
+                                    break;
                                 }
                             }
                         }
                     }
+
                     break;
                 case BillingClient.BillingResponseCode.USER_CANCELED:
+                case BillingClient.BillingResponseCode.ERROR:
                     log(BILLING, "onPurchasesUpdated() - user cancelled the purchase flow - skipping"); //NON-NLS
 
                     reportDebugInfo('b', BILLING_PURCHASE_UPDATE_USER_CANCELLED, ANALYTICS_STATUS_EVENT, null, null);
+                    checkForPurchaseFailedFromConsent(INT_STATUS_PURCHASE_OFF);
 
-                    for (PurchaseInfo info : mPurchaseInfo.values()) {
-                        if (info.consentPurchase && info.status == INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT) {
-                            D.log(BILLING, "Was purchasing from consent. So request consent again");
-                            // This should only happen during the purchase flow of the remove ads, so it should be safe
-                            setAdsStatus(STATUS_ADS_NOTHING);
-                            setPurchaseStatus(info.key, INT_STATUS_PURCHASE_OFF);
-                            checkAdConsent();
-                        }
-                    }
                     break;
                 case BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED:
                     log(BILLING, "Item is already owned - query and verify");
                     queryPurchases();
                     break;
                 default:
-                    log(BILLING, "onPurchasesUpdated() got unknown resultCode: " + result.getDebugMessage()); //NON-NLS
+                    log(BILLING, "onPurchasesUpdated() got unknown resultCode: %d. %s", result.getResponseCode(), result.getDebugMessage()); //NON-NLS
 
                     reportDebugInfo('b', BILLING_PURCHASE_UPDATE_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) result.getResponseCode(), null);
-                    for (PurchaseInfo info : mPurchaseInfo.values()) {
-                        if (info.consentPurchase && info.status == INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT) {
-                            log(ADS, "Unknown result from purchase. Something has gone wrong. Hide ads");
-                            setAdsStatus(STATUS_ADS_NOTHING);
-                            setPurchaseStatus(info.key, INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT);
-                            checkAdConsent();
-                        }
-                    }
+                    checkForPurchaseFailedFromConsent(INT_STATUS_PURCHASE_UNKNOWN);
                     break;
             }
         }
@@ -1824,7 +1838,7 @@ public class GoogleHelper {
         }
     }
 
-    private void verifyValidSignature(String key, Purchase purchase) {
+    private boolean verifyValidSignature(String key, Purchase purchase) {
         String signedData = purchase.getOriginalJson();
         String signature = purchase.getSignature();
         PurchaseInfo info = mPurchaseInfo.get(key);
@@ -1833,13 +1847,13 @@ public class GoogleHelper {
             log(BILLING, "Signed Data is empty"); //NON-NLS
             reportDebugInfo('b', BILLING_VERIFY_ERROR_NO_SIGNED_DATA, ANALYTICS_STATUS_ERROR, null, null);
             setPurchaseStatus(key, INT_STATUS_PURCHASE_OFF);
-            return;
+            return false;
         }
         if (TextUtils.isEmpty(signature)) {
             log(BILLING, "Signature is empty"); //NON-NLS
             reportDebugInfo('b', BILLING_VERIFY_ERROR_NO_SIGNATURE, ANALYTICS_STATUS_ERROR, null, null);
             setPurchaseStatus(key, INT_STATUS_PURCHASE_OFF);
-            return;
+            return false;
         }
         PublicKey publicKey = generatePublicKey(decode(mBillingPublicKey));
         if (publicKey != null) {
@@ -1856,20 +1870,24 @@ public class GoogleHelper {
                         break;
                     case Purchase.PurchaseState.PENDING:
                         setPurchaseStatus(key, INT_STATUS_PURCHASE_PENDING);
+                        setAdsStatus(STATUS_ADS_UNKNOWN);
                         break;
                     case Purchase.PurchaseState.UNSPECIFIED_STATE:
                         setPurchaseStatus(key, INT_STATUS_PURCHASE_UNKNOWN);
                         break;
                 }
+                return true;
             } else {
                 log(BILLING, "Signature is invalid. Assume pro is off");
                 // if the signature fails, something weird has probably happened
                 info.token = null;
                 setPurchaseStatus(key, INT_STATUS_PURCHASE_OFF);
+                return false;
             }
         } else {
             log(BILLING, "Unable to generate key - this should never happen"); //NON-NLS
             setPurchaseStatus(key, INT_STATUS_PURCHASE_OFF);
+            return false;
         }
     }
 
@@ -1883,7 +1901,7 @@ public class GoogleHelper {
                                 .build();
                 mBillingClient.acknowledgePurchase(params, new AcknowledgePurchaseResponseListener() {
                     @Override
-                    public void onAcknowledgePurchaseResponse(BillingResult billingResult) {
+                    public void onAcknowledgePurchaseResponse(@NonNull BillingResult billingResult) {
                         switch (billingResult.getResponseCode()) {
                             case BillingClient.BillingResponseCode.OK:
                                 reportDebugInfo('b', BILLING_PURCHASE_ACK_OK, ANALYTICS_STATUS_EVENT, null, null);

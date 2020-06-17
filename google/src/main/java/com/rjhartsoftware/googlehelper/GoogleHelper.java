@@ -1758,9 +1758,10 @@ public class GoogleHelper {
 
                     for (PurchaseInfo info : mPurchaseInfo.values()) {
                         if (info.consentPurchase && info.status == INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT) {
+                            D.log(BILLING, "Was purchasing from consent. So request consent again");
                             // This should only happen during the purchase flow of the remove ads, so it should be safe
                             setAdsStatus(STATUS_ADS_NOTHING);
-                            setPurchaseStatus(info.key, INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT);
+                            setPurchaseStatus(info.key, INT_STATUS_PURCHASE_OFF);
                             checkAdConsent();
                         }
                     }

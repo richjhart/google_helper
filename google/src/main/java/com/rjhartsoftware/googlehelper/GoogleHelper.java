@@ -35,7 +35,6 @@ import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.SkuDetails;
 import com.android.billingclient.api.SkuDetailsParams;
 import com.android.billingclient.api.SkuDetailsResponseListener;
-import com.crashlytics.android.Crashlytics;
 import com.google.ads.consent.ConsentForm;
 import com.google.ads.consent.ConsentFormListener;
 import com.google.ads.consent.ConsentInfoUpdateListener;
@@ -51,6 +50,7 @@ import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -1371,7 +1371,7 @@ public class GoogleHelper {
             D.warn(EU_CONSENT, "Unknown error trying to load consent form", e);
             setAdsStatus(STATUS_ADS_CONSENT_FAILED);
             reportDebugInfo('c', CONSENT_FORM_EXCEPTION, ANALYTICS_STATUS_ERROR, null, e.getMessage());
-            Crashlytics.logException(e);
+            FirebaseCrashlytics.getInstance().recordException(e);
         }
 
 

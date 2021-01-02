@@ -8,9 +8,8 @@ android {
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 30
-        versionCode 16
-        versionName "1.2.10"
-
+        versionCode 17
+        versionName "1.2.11"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles 'consumer-rules.pro'
     }
@@ -19,12 +18,12 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField("long", "VERSION_CODE", "${defaultConfig.versionCode}")
-            buildConfigField("String","VERSION_NAME","\"${defaultConfig.versionName}\"")
+            buildConfigField("long", "VERSION_CODE1", "${defaultConfig.versionCode}")
+            buildConfigField("String","VERSION_NAME1","\"${defaultConfig.versionName}\"")
         }
         debug {
-            buildConfigField("long", "VERSION_CODE", "${defaultConfig.versionCode}")
-            buildConfigField("String","VERSION_NAME","\"${defaultConfig.versionName}\"")
+            buildConfigField("long", "VERSION_CODE1", "${defaultConfig.versionCode}")
+            buildConfigField("String","VERSION_NAME1","\"${defaultConfig.versionName}\"")
         }
     }
     compileOptions {

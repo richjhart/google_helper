@@ -328,8 +328,8 @@ public class GoogleHelper {
             details.put("device_manufacturer", Build.MANUFACTURER); //NON-NLS
             details.put("device_product", Build.PRODUCT); //NON-NLS
             details.put("device_sdk", String.valueOf(Build.VERSION.SDK_INT)); //NON-NLS
-            details.put("app_build", BuildConfig.VERSION_CODE); //NON-NLS
-            details.put("app_version", BuildConfig.VERSION_NAME); //NON-NLS
+            details.put("app_build", BuildConfig.VERSION_CODE1); //NON-NLS
+            details.put("app_version", BuildConfig.VERSION_NAME1); //NON-NLS
             db.collection(collection)
                     .add(details)
                     .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
@@ -362,8 +362,8 @@ public class GoogleHelper {
                     details.put("device_manufacturer", Build.MANUFACTURER); //NON-NLS
                     details.put("device_product", Build.PRODUCT); //NON-NLS
                     details.put("device_sdk", String.valueOf(Build.VERSION.SDK_INT)); //NON-NLS
-                    details.put("app_build", BuildConfig.VERSION_CODE); //NON-NLS
-                    details.put("app_version", BuildConfig.VERSION_NAME); //NON-NLS
+                    details.put("app_build", BuildConfig.VERSION_CODE1); //NON-NLS
+                    details.put("app_version", BuildConfig.VERSION_NAME1); //NON-NLS
                     sVerboseDoc = db.collection("debug_verbose_log").document(String.valueOf(System.currentTimeMillis()));
                     sVerboseDoc.set(details)
                             .addOnSuccessListener(new OnSuccessListener<Void>() {

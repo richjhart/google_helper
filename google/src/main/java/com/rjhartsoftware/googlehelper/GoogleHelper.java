@@ -150,15 +150,22 @@ public class GoogleHelper {
         return this;
     }
 
+    private static boolean isOld() {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN;
+    }
+
     @SuppressWarnings("ConstantConditions")
     public GoogleHelper setRemovesAds(String key, String publisher, String consentPurchaseKey) {
-        MobileAds.initialize(mContext, publisher);
         mAdRegistered = true;
         mPurchaseInfo.get(key).removesAds = true;
         mPurchaseInfo.get(consentPurchaseKey).consentPurchase = true;
         for (String otherKey : mPurchaseInfo.get(key).otherKeys) {
             mPurchaseInfo.get(otherKey).removesAds = true;
         }
+        if (isOld()) {
+            return this;
+        }
+        MobileAds.initialize(mContext, publisher);
         return this;
     }
 
@@ -171,6 +178,9 @@ public class GoogleHelper {
         mContext = (Application) context.getApplicationContext();
         IntentFilter connFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
         context.registerReceiver(mNetworkReceiver, connFilter);
+        if (isOld()) {
+            return;
+        }
         for (String device : TEST_DEVICES) {
             ConsentInformation.getInstance(context).addTestDevice(device);
         }
@@ -178,6 +188,13 @@ public class GoogleHelper {
     }
 
     public void start() {
+        if (isOld()) {
+            for (PurchaseInfo info : mPurchaseInfo.values()) {
+                setPurchaseStatus(info.key, INT_STATUS_PURCHASE_ON);
+            }
+            updateMainStatus();
+            return;
+        }
         log(GENERAL, "'Starting'");
         if (mPurchaseRegistered) {
             if (mBillingClient == null) {
@@ -768,6 +785,12 @@ public class GoogleHelper {
     // UNKNOWN = will show the app and hide ads. Should be high priority, but not highest
 
     private void updateMainStatus() {
+        if (isOld()) {
+            updateAdVisibility();
+            updateOverallVisibility();
+            updateSettingVisibility();
+            return;
+        }
         @InternalPurchaseStatus int currentPurchaseStatus = getAdsPurchaseStatus();
         log(ADS, String.format("Updating overall status... Pro is %s. Ads is %s", getPurchaseStatusName(currentPurchaseStatus), getAdsStatusName(mAdsStatus)));
         switch (currentPurchaseStatus) {
@@ -847,6 +870,12 @@ public class GoogleHelper {
     }
 
     private void updateOverallVisibility() {
+        if (isOld()) {
+            if (mHoldingView != null) {
+                mHoldingView.setVisibility(View.GONE);
+            }
+            return;
+        }
         log(EU_CONSENT, String.format("Updating visibility of whole app... Status: %s", getStatus(mOverallStatus)));
         if (mHoldingView != null) {
             log(EU_CONSENT, "Holding view is set...");
@@ -873,7 +902,6 @@ public class GoogleHelper {
 
     //region Ads (And Consent)
     private static final String[] TEST_DEVICES = new String[]{
-            "5F39972DBABC6E538CFB40EB92DDC26C", // TF101
             "D7CBF60667925E6FBB3EF8261D190F7A", // iRulu
             "D91D37F46105B674BE3AC908E8B45F9C", // OnePlus 5
             "E1AADDC4BD1DC95985EBE1D13213C449", // Lenovo Tablet
@@ -891,6 +919,10 @@ public class GoogleHelper {
     private boolean mRequestingAd = false;
 
     public void registerAdView(@Nullable View adView) {
+        if (isOld()) {
+            hideAds();
+            return;
+        }
         if (mAdRegistered && adView instanceof AdView) {
             log(ADS, "Successfully registering Ad Fragment: " + adView); //NON-NLS
             if (mAdView != adView && mAdView != null) {
@@ -903,6 +935,10 @@ public class GoogleHelper {
     }
 
     public void unregisterAdView() {
+        if (isOld()) {
+            hideAds();
+            return;
+        }
         log(ADS, "Successfully Un-registering Ad Fragment"); //NON-NLS
         hideAds();
         if (mAdView != null) {
@@ -913,6 +949,9 @@ public class GoogleHelper {
     }
 
     public void pauseAd() {
+        if (isOld()) {
+            return;
+        }
         log(ADS, "pausing ad: " + (mAdView != null)); //NON-NLS
         if (mAdView != null) {
             mAdView.pause();
@@ -920,11 +959,20 @@ public class GoogleHelper {
     }
 
     public void resumeAd() {
+        if (isOld()) {
+            return;
+        }
         log(ADS, "Resuming ad"); //NON-NLS
         updateAdVisibility();
     }
 
     private void updateAdVisibility() {
+        if (isOld()) {
+            if (mAdView != null) {
+                mAdView.setVisibility(View.GONE);
+            }
+            return;
+        }
         log(ADS, "Showing or hiding ad: " + getStatus(mOverallStatus)); //NON-NLS
         switch (mOverallStatus) {
             case STATUS_SHOW_ALL_ADS:
@@ -1096,6 +1144,9 @@ public class GoogleHelper {
     private ConsentForm mConsentForm = null;
 
     private void setAdsStatus(@StatusAds int status) {
+        if (isOld()) {
+            return;
+        }
         log(ADS, String.format(Locale.US, "Updating ads status from %s to %s", getAdsStatusName(mAdsStatus), getAdsStatusName(status))); //NON-NLS
         if (mAdsStatus != status) {
             log(ADS, "Ads status has changed...");
@@ -1109,6 +1160,9 @@ public class GoogleHelper {
     }
 
     private void maybeResetAdsStatus() {
+        if (isOld()) {
+            return;
+        }
         switch (mAdsStatus) {
             case GoogleHelper.STATUS_ADS_CONSENT_FAILED:
             case GoogleHelper.STATUS_ADS_UNKNOWN:
@@ -1133,6 +1187,9 @@ public class GoogleHelper {
     }
 
     private void checkAdConsent() {
+        if (isOld()) {
+            return;
+        }
         if (!mAdRegistered) {
             return;
         }
@@ -1211,6 +1268,9 @@ public class GoogleHelper {
     }
 
     public void clearConsent() {
+        if (isOld()) {
+            return;
+        }
         if (!mAdRegistered) {
             return;
         }
@@ -1225,6 +1285,9 @@ public class GoogleHelper {
     private boolean mConsentFormShowing = false;
 
     private void requestConsent() {
+        if (isOld()) {
+            return;
+        }
         if (!mAdRegistered) {
             return;
         }
@@ -1475,6 +1538,11 @@ public class GoogleHelper {
         }
         PurchaseInfo info = mPurchaseInfo.get(key);
         assert info != null;
+        if (isOld()) {
+            info.status = status;
+            purchasesStatusChanged();
+            return;
+        }
         D.log(BILLING, String.format(Locale.US, "Updating purchase status for %s from %s to %s", key, getPurchaseStatusName(info.status), getPurchaseStatusName(status))); //NON-NLS
         @InternalPurchaseStatus int initialAdsStatus = getAdsPurchaseStatus();
         if (info.status != status) {
@@ -1501,6 +1569,9 @@ public class GoogleHelper {
     }
 
     private void initialiseBilling() {
+        if (isOld()) {
+            return;
+        }
         if (mPurchaseRegistered) {
             log(BILLING, "Initialise billing");
             startServiceConnection(new Runnable() {
@@ -1516,6 +1587,9 @@ public class GoogleHelper {
     }
 
     private void executeServiceRequest(Runnable runnable) {
+        if (isOld()) {
+            return;
+        }
         if (mPurchaseRegistered) {
             log(BILLING, "Requesting service request (Google action)");
             if (mIsServiceConnected) {
@@ -1529,6 +1603,9 @@ public class GoogleHelper {
     }
 
     private void startServiceConnection(final Runnable executeOnSuccess) {
+        if (isOld()) {
+            return;
+        }
         if (mPurchaseRegistered) {
             mBillingClient.startConnection(new BillingClientStateListener() {
                 @Override
@@ -1595,6 +1672,9 @@ public class GoogleHelper {
     }
 
     private void queryPurchases() {
+        if (isOld()) {
+            return;
+        }
         if (mPurchaseRegistered) {
             log(BILLING, "Querying purchases");
             Runnable queryToExecute = new Runnable() {
@@ -1636,6 +1716,9 @@ public class GoogleHelper {
     }
 
     private void queryProducts() {
+        if (isOld()) {
+            return;
+        }
         if (mPurchaseRegistered) {
             log(BILLING, "Get product details");
             Runnable queryToExecute = new Runnable() {
@@ -1686,6 +1769,9 @@ public class GoogleHelper {
     }
 
     private boolean startPurchaseFromConsent() {
+        if (isOld()) {
+            return false;
+        }
         for (PurchaseInfo info : mPurchaseInfo.values()) {
             if (info.consentPurchase) {
                 return startPurchase(info.key, true);
@@ -1699,6 +1785,9 @@ public class GoogleHelper {
     }
 
     private boolean startPurchase(final String key, final boolean fromConsent) {
+        if (isOld()) {
+            return false;
+        }
         if (mPurchaseInfo.containsKey(key)) {
             log(BILLING, "Starting purchase flow"); //NON-NLS
             final PurchaseInfo info = mPurchaseInfo.get(key);
@@ -1741,6 +1830,9 @@ public class GoogleHelper {
     }
 
     private void checkForPurchaseFailedFromConsent(@InternalPurchaseStatus Integer status) {
+        if (isOld()) {
+            return;
+        }
         for (PurchaseInfo info : mPurchaseInfo.values()) {
             if (info.consentPurchase && info.status == INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT) {
                 D.log(BILLING, "Was purchasing from consent. So request consent again");
@@ -1803,6 +1895,9 @@ public class GoogleHelper {
 
     // this is only used for debugging
     public void consumePurchase(String sku) {
+        if (isOld()) {
+            return;
+        }
         for (final PurchaseInfo info : mPurchaseInfo.values()) {
             if (info.key.equals(sku)) {
                 if (info.token != null) {
@@ -1839,6 +1934,9 @@ public class GoogleHelper {
     }
 
     private boolean verifyValidSignature(String key, Purchase purchase) {
+        if (isOld()) {
+            return false;
+        }
         String signedData = purchase.getOriginalJson();
         String signature = purchase.getSignature();
         PurchaseInfo info = mPurchaseInfo.get(key);
@@ -1892,6 +1990,9 @@ public class GoogleHelper {
     }
 
     private void acknowledgePurchase(Purchase purchase) {
+        if (isOld()) {
+            return;
+        }
         executeServiceRequest(new Runnable() {
             @Override
             public void run() {
@@ -2001,6 +2102,10 @@ public class GoogleHelper {
     private Preference mPrefGdpr = null;
 
     public void registerProSettings(Preference[] purchasePrefs, Preference gdpr) {
+        if (isOld()) {
+            updateSettingVisibility();
+            return;
+        }
         log(ADS, "Registering Settings"); //NON-NLS
         for (Preference pref : purchasePrefs) {
             for (PurchaseInfo info : mPurchaseInfo.values()) {
@@ -2015,6 +2120,10 @@ public class GoogleHelper {
     }
 
     public void unregisterProSettings() {
+        if (isOld()) {
+            updateSettingVisibility();
+            return;
+        }
         log(ADS, "Un-Registering Settings"); //NON-NLS
         for (PurchaseInfo info : mPurchaseInfo.values()) {
             if (info.preference != null) {
@@ -2030,6 +2139,19 @@ public class GoogleHelper {
     }
 
     private void updateSettingVisibility() {
+        if (isOld()) {
+            for (PurchaseInfo info : mPurchaseInfo.values()) {
+                if (info.preference != null) {
+                    info.preference.setEnabled(false);
+                    info.preference.setVisible(false);
+                }
+            }
+            if (mPrefGdpr != null) {
+                mPrefGdpr.setEnabled(false);
+                mPrefGdpr.setVisible(false);
+            }
+            return;
+        }
         for (PurchaseInfo info : mPurchaseInfo.values()) {
             if (info.preference != null) {
                 @PurchaseStatus int status = getPurchaseStatus(info.key);

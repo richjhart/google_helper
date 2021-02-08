@@ -5,21 +5,23 @@ import android.os.Bundle;
 
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
-import androidx.preference.PreferenceFragmentCompat;
+
+import com.google.errorprone.annotations.ForOverride;
+import com.takisoft.preferencex.PreferenceFragmentCompat;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class FragmentPreferences extends PreferenceFragmentCompat {
+public class GoogleHelperPreferencesFragment extends PreferenceFragmentCompat {
 
     public static final String TAG = "_frag_settings";
 
-    public FragmentPreferences() {
+    public GoogleHelperPreferencesFragment() {
         // Required empty public constructor
     }
 
     @Override
-    public void onCreatePreferences(Bundle bundle, String s) {
+    public void onCreatePreferencesFix(Bundle bundle, String s) {
         setPreferencesFromResource(R.xml.preferences, s);
 
         if (getContext() != null) {

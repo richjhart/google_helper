@@ -7,7 +7,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.multidex.MultiDexApplication;
 import androidx.preference.PreferenceManager;
 
-public class App extends MultiDexApplication {
+public class GoogleHelperApp extends MultiDexApplication {
     @Override
     public void onCreate() {
         updateTheme();

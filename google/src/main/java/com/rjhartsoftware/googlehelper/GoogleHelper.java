@@ -105,24 +105,15 @@ public class GoogleHelper {
         return sInstance;
     }
 
-    public static GoogleHelper init(@NonNull Context context) {
+    static void init(@NonNull Application context, @Nullable String billingKey) {
         sInstance.initO(context);
-        return sInstance;
-    }
-
-    public static GoogleHelper init(@NonNull Context context, String billingKey) {
-        sInstance.initO(context);
-        sInstance.setBillingPublicKey(billingKey);
-        return sInstance;
-    }
-
-    public static void destroy(@Nullable Context context) {
-        try {
-            if (context != null) {
-                context.unregisterReceiver(sInstance.mNetworkReceiver);
+        if (!TextUtils.isEmpty(billingKey)) {
+            sInstance.setBillingPublicKey(billingKey);
+            if (context.getResources().getBoolean(R.bool.google_auto_setup)) {
+                sInstance.addPurchaseInfo(context.getString(R.string.sku_remove_ads));
+                sInstance.setRemovesAds(context.getString(R.string.sku_remove_ads));
+                sInstance.start();
             }
-        } catch (Exception ignore) {
-
         }
     }
 
@@ -143,34 +134,23 @@ public class GoogleHelper {
         return this;
     }
 
-    @Deprecated
-    public GoogleHelper setConsentPurchase(String key) {
-        //noinspection ConstantConditions
-        mPurchaseInfo.get(key).consentPurchase = true;
-        return this;
-    }
-
     private static boolean isOld() {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN;
     }
 
     @SuppressWarnings("ConstantConditions")
-    public GoogleHelper setRemovesAds(String key, String publisher, String consentPurchaseKey) {
+    public GoogleHelper setRemovesAds(String key) {
         mAdRegistered = true;
         mPurchaseInfo.get(key).removesAds = true;
-        mPurchaseInfo.get(consentPurchaseKey).consentPurchase = true;
+        mPurchaseInfo.get(key).consentPurchase = true;
         for (String otherKey : mPurchaseInfo.get(key).otherKeys) {
             mPurchaseInfo.get(otherKey).removesAds = true;
         }
         if (isOld()) {
             return this;
         }
-        MobileAds.initialize(mContext, publisher);
+        MobileAds.initialize(mContext, mContext.getString(R.string.ad_mob_app_id));
         return this;
-    }
-
-    public GoogleHelper setRemovesAds(String key, String publisher) {
-        return setRemovesAds(key, publisher, key);
     }
 
     private void initO(@NonNull Context context) {
@@ -195,6 +175,9 @@ public class GoogleHelper {
             updateMainStatus();
             return;
         }
+
+        initRemoteConfig(R.xml.remote_config_defaults);
+
         log(GENERAL, "'Starting'");
         if (mPurchaseRegistered) {
             if (mBillingClient == null) {
@@ -423,7 +406,7 @@ public class GoogleHelper {
 
     private FirebaseRemoteConfig mRemoteConfig;
 
-    public GoogleHelper initRemoteConfig(@XmlRes int initRes) {
+    void initRemoteConfig(@XmlRes int initRes) {
         mRemoteConfig = FirebaseRemoteConfig.getInstance();
         //noinspection MagicNumber
         FirebaseRemoteConfigSettings configSettings = new FirebaseRemoteConfigSettings.Builder()
@@ -432,7 +415,6 @@ public class GoogleHelper {
         mRemoteConfig.setDefaultsAsync(initRes);
         mRemoteConfig.setConfigSettingsAsync(configSettings);
         mRemoteConfig.fetchAndActivate();
-        return this;
     }
 
     public long getRemoteLong(String key) {
@@ -2101,7 +2083,7 @@ public class GoogleHelper {
 
     private Preference mPrefGdpr = null;
 
-    public void registerProSettings(Preference[] purchasePrefs, Preference gdpr) {
+    void registerProSettings(Preference[] purchasePrefs, Preference gdpr) {
         if (isOld()) {
             updateSettingVisibility();
             return;
@@ -2119,7 +2101,7 @@ public class GoogleHelper {
         updateSettingVisibility();
     }
 
-    public void unregisterProSettings() {
+    void unregisterProSettings() {
         if (isOld()) {
             updateSettingVisibility();
             return;

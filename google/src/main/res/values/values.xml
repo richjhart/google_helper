@@ -11,4 +11,9 @@
         <item>@string/settings_theme_entry_dark_1</item>
     </string-array>
 
+    <string name="settings_key_google" translatable="false">settings_google</string>
+
+    <bool name="google_auto_setup">false</bool>
+    <string name="settings_key_gdpr" translatable="false">settings_gdpr</string>
+
 </resources>

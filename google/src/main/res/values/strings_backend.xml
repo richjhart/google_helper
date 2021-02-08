@@ -3,6 +3,10 @@
     <string name="empty" translatable="false" />
 
     <string name="ad_mob_app_id" translatable="false">SET \'ad_mob_app_id\' in resources</string>
+    <string name="billing_public_key" translatable="false">SET \'billing_public_key\' in resources</string>
+
+    <string name="sku_remove_ads" translatable="false" />
+
     <string name="app_name" translatable="false">google</string>
 
     <string name="ads_publisher_id" translatable="false">pub-4750446129557325</string>

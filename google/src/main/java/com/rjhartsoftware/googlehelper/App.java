@@ -12,6 +12,7 @@ public class App extends MultiDexApplication {
     public void onCreate() {
         updateTheme();
         super.onCreate();
+        GoogleHelper.init(this, this.getString(R.string.billing_public_key));
         PreferenceManager.getDefaultSharedPreferences(this).registerOnSharedPreferenceChangeListener(mPrefListener);
     }
 

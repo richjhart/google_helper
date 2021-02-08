@@ -10,4 +10,20 @@
         android:summary="%s"
         android:title="@string/settings_theme_title_1"
         />
+
+    <PreferenceCategory
+        android:key="@string/settings_key_google"
+        android:layout="@layout/pref_category"
+        android:title="@string/settings_title_ads_1">
+        <Preference
+            android:enabled="false"
+            android:key="@string/sku_remove_ads"
+            android:layout="@layout/pref_layout"
+            android:title="@string/settings_title_pro_1" />
+        <Preference
+            android:key="@string/settings_key_gdpr"
+            android:layout="@layout/pref_layout"
+            android:title="@string/settings_title_gdpr_1" />
+    </PreferenceCategory>
+
 </resources>

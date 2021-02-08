@@ -16,4 +16,6 @@
     <bool name="google_auto_setup">false</bool>
     <string name="settings_key_gdpr" translatable="false">settings_gdpr</string>
 
+    <id name="google_hide_ui" />
+    <id name="google_ad_view" />
 </resources>

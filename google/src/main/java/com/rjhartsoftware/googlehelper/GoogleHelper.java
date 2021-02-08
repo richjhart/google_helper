@@ -117,11 +117,11 @@ public class GoogleHelper {
         }
     }
 
-    public void registerActivity(Activity activity) {
+    void registerActivity(Activity activity) {
         mActivity = new WeakReference<>(activity);
     }
 
-    public void unregisterActivity() {
+    void unregisterActivity() {
         mActivity = new WeakReference<>(null);
         mConsentFormShowing = false;
     }
@@ -522,7 +522,7 @@ public class GoogleHelper {
 
     }
 
-    public void setHoldingView(View waitView) {
+    void setHoldingView(View waitView) {
         log(EU_CONSENT, "Setting holding view");
         mHoldingView = waitView;
         updateOverallVisibility();
@@ -532,7 +532,7 @@ public class GoogleHelper {
         }
     }
 
-    public void releaseHoldingView() {
+    void releaseHoldingView() {
         log(EU_CONSENT, "Releasing holding view");
         mHoldingView = null;
     }
@@ -900,7 +900,7 @@ public class GoogleHelper {
     private boolean mGooglePlayServicesAvailable = false;
     private boolean mRequestingAd = false;
 
-    public void registerAdView(@Nullable View adView) {
+    void registerAdView(@Nullable View adView) {
         if (isOld()) {
             hideAds();
             return;
@@ -916,7 +916,7 @@ public class GoogleHelper {
         }
     }
 
-    public void unregisterAdView() {
+    void unregisterAdView() {
         if (isOld()) {
             hideAds();
             return;
@@ -930,7 +930,7 @@ public class GoogleHelper {
         mAdView = null;
     }
 
-    public void pauseAd() {
+    void pauseAd() {
         if (isOld()) {
             return;
         }
@@ -940,7 +940,7 @@ public class GoogleHelper {
         }
     }
 
-    public void resumeAd() {
+    void resumeAd() {
         if (isOld()) {
             return;
         }

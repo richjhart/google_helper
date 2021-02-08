@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+        <item name="windowActionModeOverlay">true</item>
+        <item name="android:actionModeBackground">@color/colorAccent</item>
+        <item name="actionModeBackground">@color/colorAccent</item>
+    </style>
+
+        <style name="AppTheme.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="CustomAlertDialogTheme" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:background">@color/main_background</item>
+    </style>
+
+    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+    </style>
+
+    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light"/>
+
+    <style name="TextNormal" parent="@android:style/TextAppearance.DeviceDefault" >
+        <item name="android:textColor">@color/default_text_color_state</item>
+    </style>
+
+    <style name="TextSmall" parent="@android:style/TextAppearance.DeviceDefault.Small" >
+        <item name="android:textColor">@color/default_text_color_state</item>
+    </style>
+
+    <style name="TextMedium" parent="@android:style/TextAppearance.DeviceDefault.Medium" >
+        <item name="android:textColor">@color/default_text_color_state</item>
+    </style>
+
+    <style name="TextLarge" parent="@android:style/TextAppearance.DeviceDefault.Large" >
+        <item name="android:textColor">@color/default_text_color_state</item>
+    </style>
+
+    <style name="TextSettingsCategory">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/colorAccent</item>
+        <item name="android:paddingTop">16dp</item>
+        <item name="android:layout_marginBottom">16dp</item>
+    </style>
+
+    <style name="TextSettingsTitle" parent="@style/TextNormal" />
+
+    <style name="TextSettingsDetails" parent="@style/TextSmall" />
+
+</resources>

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="general_cancelling_1">Cancelling…</string>
+    <string name="settings_title_gdpr_1">Ad personalisation</string>
+
     <string name="settings_summary_gdpr_non_personalised">Showing non-personalised ads. Tap to change</string>
     <string name="settings_summary_gdpr_personalised">Showing personalised ads. Tap to change</string>
     <string name="settings_summary_gdpr_unknown">Tap to select personalised or non-personalised ads</string>

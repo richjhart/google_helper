@@ -1,44 +1,26 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <!-- Phone: Accessibility > Turn Talk Back On > Cancel and OK -->
     <string name="general_ok_1">OK</string>
     <string name="general_cancel_1">Anuluj</string>
     <string name="general_cancelling_1">Anulowanie…</string>
-    <!-- Ubuntu: Open Settings > Menu at top > Second item -->
     <string name="general_help_1">Pomoc</string>
     <string name="general_settings_1">Ustawienia</string>
-    <!-- Should be the target language, not a direct translation -->
-    <!-- Languages and Input -->
     <string name="general_language_1">Polski</string>
-    <!-- Shown when the app is loading and ad consent is required -->
     <string name="loading_ui_wait_1">Proszę czekać…</string>
-
-    <!-- In the very rare event that there is no browser on the device when they click on a link -->
     <string name="open_link_failed_1">Na telefonie nie jest zainstalowana odpowiednia aplikacja. Zainstaluj przeglądarkę internetową.</string>
-
     <!-- region Pro -->
     <string name="settings_title_ads_1">Reklamy i wersja Pro</string>
-
     <string name="settings_title_pro_1">Kup wersję Pro</string>
-
     <string name="settings_title_gdpr_1">Personalizacja reklam</string>
     <!-- endregion -->
-
     <string name="settings_summary_pro_off_no_price">Dotknij, aby kupić lub odśwież, jeśli już kupiłeś.</string>
     <string name="settings_summary_pro_off">Dotknij, aby kupić (%s) lub odśwież, jeśli już kupiłeś.</string>
     <string name="settings_summary_pro_on">Już zakupiono</string>
     <string name="settings_summary_gdpr_non_personalised">Wyświetlanie reklam niespersonalizowanych. Dotknij, aby zmienić</string>
     <string name="settings_summary_gdpr_personalised">Wyświetlanie reklam spersonalizowanych. Dotknij, aby zmienić</string>
     <string name="settings_summary_gdpr_unknown">Dotknij, aby wybrać reklamy spersonalizowane lub niespersonalizowane</string>
-
-    <!-- OnePlus: Gmail > Settings > General Settings (First Item) > First Option (Title) -->
     <string name="settings_theme_title_1">Motyw</string>
-    <!-- OnePlus: Gmail > Settings > General Settings (First Item) > First Option > First Option -->
     <string name="settings_theme_entry_light_1">Jasny</string>
     <string name="settings_theme_entry_dark_1">Ciemny</string>
-    <!-- Settings > Battery > Title of first section -->
     <string name="settings_theme_entry_battery_1">Oszczędzanie baterii</string>
     <string name="settings_theme_entry_system_1">Domyślny systemowy</string>
-
 </resources>

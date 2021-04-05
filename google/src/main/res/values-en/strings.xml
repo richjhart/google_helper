@@ -1,43 +1,26 @@
 <resources>
-
-    <!-- Phone: Accessibility > Turn Talk Back On > Cancel and OK -->
-    <string name="general_ok_1">OK</string> <!-- DNT -->
-    <string name="general_cancel_1">Cancel</string> <!-- DNT -->
+    <string name="general_ok_1">OK</string>
+    <string name="general_cancel_1">Cancel</string>
     <string name="general_cancelling_1">Canceling…</string>
-    <!-- Ubuntu: Open Settings > Menu at top > Second item -->
-    <string name="general_help_1">Help</string> <!-- DNT -->
-    <string name="general_settings_1">Settings</string> <!-- DNT -->
-    <!-- Should be the target language, not a direct translation -->
-    <!-- Languages and Input -->
-    <string name="general_language_1">English</string> <!-- DNT -->
-    <!-- Shown when the app is loading and ad consent is required -->
+    <string name="general_help_1">Help</string>
+    <string name="general_settings_1">Settings</string>
+    <string name="general_language_1">English</string>
     <string name="loading_ui_wait_1">Please wait…</string>
-
-    <!-- In the very rare event that there is no browser on the device when they click on a link -->
     <string name="open_link_failed_1">No application can handle this request. Please install a web browser.</string>
-
     <!-- region Pro -->
     <string name="settings_title_ads_1">Ads &amp; Pro</string>
-
     <string name="settings_title_pro_1">Upgrade to Pro</string>
-
     <string name="settings_title_gdpr_1">Ad personalization</string>
     <!-- endregion -->
-
     <string name="settings_summary_pro_off_no_price">Tap to purchase, or to refresh if you\'ve purchased already.</string>
     <string name="settings_summary_pro_off">Tap to purchase (%s), or to refresh if you\'ve purchased already.</string>
     <string name="settings_summary_pro_on">Already purchased</string>
     <string name="settings_summary_gdpr_non_personalised">Showing non-personalized ads. Tap to change</string>
     <string name="settings_summary_gdpr_personalised">Showing personalized ads. Tap to change</string>
     <string name="settings_summary_gdpr_unknown">Tap to select personalized or non-personalized ads</string>
-
-    <!-- OnePlus: Gmail > Settings > General Settings (First Item) > First Option (Title) -->
-    <string name="settings_theme_title_1">Theme</string> <!-- DNT -->
-    <!-- OnePlus: Gmail > Settings > General Settings (First Item) > First Option > First Option -->
-    <string name="settings_theme_entry_light_1">Light</string> <!-- DNT -->
-    <string name="settings_theme_entry_dark_1">Dark</string> <!-- DNT -->
-    <!-- Settings > Battery > Title of first section -->
-    <string name="settings_theme_entry_battery_1">Battery Saver</string> <!-- DNT -->
-    <string name="settings_theme_entry_system_1">System default</string> <!-- DNT -->
-
+    <string name="settings_theme_title_1">Theme</string>
+    <string name="settings_theme_entry_light_1">Light</string>
+    <string name="settings_theme_entry_dark_1">Dark</string>
+    <string name="settings_theme_entry_battery_1">Battery Saver</string>
+    <string name="settings_theme_entry_system_1">System default</string>
 </resources>

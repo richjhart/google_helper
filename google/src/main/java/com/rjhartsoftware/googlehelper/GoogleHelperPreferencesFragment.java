@@ -3,6 +3,7 @@ package com.rjhartsoftware.googlehelper;
 import android.os.Build;
 import android.os.Bundle;
 
+import androidx.annotation.CallSuper;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 
@@ -20,6 +21,7 @@ public class GoogleHelperPreferencesFragment extends PreferenceFragmentCompat {
         // Required empty public constructor
     }
 
+    @CallSuper
     @Override
     public void onCreatePreferencesFix(Bundle bundle, String s) {
         setPreferencesFromResource(R.xml.preferences, s);
@@ -49,6 +51,7 @@ public class GoogleHelperPreferencesFragment extends PreferenceFragmentCompat {
         }
     }
 
+    @CallSuper
     @Override
     public void onDestroyView() {
         GoogleHelper.getInstance().unregisterProSettings();

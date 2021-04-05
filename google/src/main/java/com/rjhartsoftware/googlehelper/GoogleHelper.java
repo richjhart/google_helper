@@ -72,7 +72,9 @@ import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
+import java.util.Dictionary;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -94,7 +96,8 @@ public class GoogleHelper {
         }
     };
 
-    private static final GoogleHelper sInstance = new GoogleHelper();
+    private static final Dictionary<Integer, GoogleHelper> sInstances = new Hashtable<>();
+    //private static final GoogleHelper sInstance = new GoogleHelper();
     private Application mContext;
     private WeakReference<Activity> mActivity = new WeakReference<>(null);
 
@@ -102,17 +105,22 @@ public class GoogleHelper {
     }
 
     public static GoogleHelper getInstance() {
-        return sInstance;
+        GoogleHelper instance = sInstances.get(android.os.Process.myPid());
+        if (instance == null) {
+            sInstances.put(android.os.Process.myPid(), new GoogleHelper());
+        }
+        return sInstances.get(android.os.Process.myPid());
     }
 
     static void init(@NonNull Application context, @Nullable String billingKey) {
-        sInstance.initO(context);
+        GoogleHelper instance = getInstance();
+        instance.initO(context);
         if (!TextUtils.isEmpty(billingKey)) {
-            sInstance.setBillingPublicKey(billingKey);
+            instance.setBillingPublicKey(billingKey);
             if (context.getResources().getBoolean(R.bool.google_auto_setup)) {
-                sInstance.addPurchaseInfo(context.getString(R.string.sku_remove_ads));
-                sInstance.setRemovesAds(context.getString(R.string.sku_remove_ads));
-                sInstance.start();
+                instance.addPurchaseInfo(context.getString(R.string.sku_remove_ads));
+                instance.setRemovesAds(context.getString(R.string.sku_remove_ads));
+                instance.start();
             }
         }
     }
@@ -317,7 +325,7 @@ public class GoogleHelper {
         if (extraData != null) {
             details.putString("extraData", extraData.toString()); //NON-NLS
         }
-        FirebaseAnalytics.getInstance(sInstance.mContext).logEvent("internal_info", details); //NON-NLS
+        FirebaseAnalytics.getInstance(getInstance().mContext).logEvent("internal_info", details); //NON-NLS
     }
 
     public static void store(String collection, Map<String, Object> details) {

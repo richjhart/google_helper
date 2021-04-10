@@ -567,6 +567,9 @@ public class GoogleHelper {
             return PURCHASE_DISABLED;
         }
         PurchaseInfo info = mPurchaseInfo.get(key);
+        if (info.simulated && D.DEBUG) {
+            return PURCHASE_ENABLED;
+        }
         boolean allOff = true;
         boolean anyWaiting = false;
         assert info != null;
@@ -633,6 +636,9 @@ public class GoogleHelper {
                 first = false;
             } else {
                 if (info.removesAds) {
+                    if (info.simulated && D.DEBUG) {
+                        return INT_STATUS_PURCHASE_ON;
+                    }
                     switch (status) {
                         case INT_STATUS_PURCHASE_OFF:
                         case INT_STATUS_PURCHASE_PENDING: // pending is currently considered to be off
@@ -1447,6 +1453,7 @@ public class GoogleHelper {
         private SkuDetails skuDetails;
         private String token;
         private final String[] otherKeys;
+        private boolean simulated = false;
 
         private PurchaseInfo(String key, String... otherKeys) {
             this.key = key;
@@ -1883,6 +1890,18 @@ public class GoogleHelper {
         }
     }
 
+    public void simulatePurchase(String sku) {
+        if (isOld()) {
+            return;
+        }
+        for (final PurchaseInfo info : mPurchaseInfo.values()) {
+            if (info.key.equals(sku)) {
+                info.simulated = true;
+                setPurchaseStatus(sku, INT_STATUS_PURCHASE_ON);
+            }
+        }
+    }
+
     // this is only used for debugging
     public void consumePurchase(String sku) {
         if (isOld()) {
@@ -1890,6 +1909,11 @@ public class GoogleHelper {
         }
         for (final PurchaseInfo info : mPurchaseInfo.values()) {
             if (info.key.equals(sku)) {
+                if (info.simulated && D.DEBUG) {
+                    info.simulated = false;
+                    setPurchaseStatus(info.key, INT_STATUS_PURCHASE_OFF);
+                    return;
+                }
                 if (info.token != null) {
                     // Generating Consume Response listener
                     final ConsumeResponseListener onConsumeListener = new ConsumeResponseListener() {

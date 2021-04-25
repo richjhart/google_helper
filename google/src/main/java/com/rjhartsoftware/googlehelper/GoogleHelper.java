@@ -2154,16 +2154,27 @@ public class GoogleHelper {
 
     private void updateSettingVisibility() {
         if (isOld()) {
+            boolean parent_done = false;
             for (PurchaseInfo info : mPurchaseInfo.values()) {
                 if (info.preference != null) {
                     info.preference.setEnabled(false);
                     info.preference.setVisible(false);
+                    if (!parent_done && info.preference.getParent() != null) {
+                        info.preference.getParent().setVisible(false);
+                        info.preference.getParent().setEnabled(false);
+                        parent_done = true;
+                    }
                 }
             }
             if (mPrefGdpr != null) {
                 mPrefGdpr.setEnabled(false);
                 mPrefGdpr.setVisible(false);
+                if (!parent_done && mPrefGdpr.getParent() != null) {
+                    mPrefGdpr.getParent().setVisible(false);
+                    mPrefGdpr.getParent().setEnabled(false);
+                }
             }
+
             return;
         }
         for (PurchaseInfo info : mPurchaseInfo.values()) {

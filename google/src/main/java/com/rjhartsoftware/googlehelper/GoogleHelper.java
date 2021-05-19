@@ -31,6 +31,7 @@ import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.ConsumeParams;
 import com.android.billingclient.api.ConsumeResponseListener;
 import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchasesResponseListener;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.SkuDetails;
 import com.android.billingclient.api.SkuDetailsParams;
@@ -44,7 +45,11 @@ import com.google.ads.mediation.admob.AdMobAdapter;
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.RequestConfiguration;
+import com.google.android.gms.ads.initialization.InitializationStatus;
+import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -72,6 +77,7 @@ import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -157,7 +163,16 @@ public class GoogleHelper {
         if (isOld()) {
             return this;
         }
-        MobileAds.initialize(mContext, mContext.getString(R.string.ad_mob_app_id));
+        MobileAds.initialize(mContext, new OnInitializationCompleteListener() {
+            @Override
+            public void onInitializationComplete(@NonNull InitializationStatus initializationStatus) {
+                log(GENERAL, "Ad initialisation complete");
+            }
+        });
+        List<String> testDeviceIds = Arrays.asList(TEST_DEVICES);
+        RequestConfiguration configuration =
+                new RequestConfiguration.Builder().setTestDeviceIds(testDeviceIds).build();
+        MobileAds.setRequestConfiguration(configuration);
         return this;
     }
 
@@ -342,7 +357,7 @@ public class GoogleHelper {
                     .add(details)
                     .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
                         @Override
-                        public void onSuccess(DocumentReference documentReference) {
+                        public void onSuccess(@NonNull DocumentReference documentReference) {
                             D.log(FIRESTORE, "Success writing to firestore");
                         }
                     })
@@ -376,7 +391,7 @@ public class GoogleHelper {
                     sVerboseDoc.set(details)
                             .addOnSuccessListener(new OnSuccessListener<Void>() {
                                 @Override
-                                public void onSuccess(Void aVoid) {
+                                public void onSuccess(@NonNull Void aVoid) {
                                     D.log(VERBOSE, "Created - success");
                                 }
                             })
@@ -395,7 +410,7 @@ public class GoogleHelper {
                 sVerboseDoc.update(details)
                         .addOnSuccessListener(new OnSuccessListener<Void>() {
                             @Override
-                            public void onSuccess(Void aVoid) {
+                            public void onSuccess(@NonNull Void aVoid) {
                                 D.log(VERBOSE, "Complete - success");
                             }
                         })
@@ -567,12 +582,12 @@ public class GoogleHelper {
             return PURCHASE_DISABLED;
         }
         PurchaseInfo info = mPurchaseInfo.get(key);
+        assert info != null;
         if (info.simulated && D.DEBUG) {
             return PURCHASE_ENABLED;
         }
         boolean allOff = true;
         boolean anyWaiting = false;
-        assert info != null;
         switch (info.status) {
             case INT_STATUS_PURCHASE_ON:
                 return PURCHASE_ENABLED;
@@ -996,11 +1011,7 @@ public class GoogleHelper {
                         if (mAdRequest == null) {
                             mShowingNonPersonalisedAds = mOverallStatus == STATUS_SHOW_ANONYMOUS_ADS;
 
-                            AdRequest.Builder builder = new AdRequest.Builder()
-                                    .addTestDevice(AdRequest.DEVICE_ID_EMULATOR);
-                            for (String device : TEST_DEVICES) {
-                                builder.addTestDevice(device);
-                            }
+                            AdRequest.Builder builder = new AdRequest.Builder();
                             if (mShowingNonPersonalisedAds) {
                                 Bundle extras = new Bundle();
                                 extras.putString("npa", "1"); //NON-NLS
@@ -1027,9 +1038,9 @@ public class GoogleHelper {
 
     private final AdListener mAdListener = new AdListener() {
         @Override
-        public void onAdFailedToLoad(int errorCode) {
-            super.onAdFailedToLoad(errorCode);
-            log(ADS, "Ad failed to load: " + errorCode); //NON-NLS
+        public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+            super.onAdFailedToLoad(loadAdError);
+            log(ADS, "Ad failed to load: " + loadAdError.toString()); //NON-NLS
             reportDebugInfo('a', STATS_AD_FAILED_TO_LOAD, ANALYTICS_STATUS_WARNING, null, null);
             if (mAdView != null) {
                 mAdView.setVisibility(View.GONE);
@@ -1251,6 +1262,7 @@ public class GoogleHelper {
                             case STATUS_ADS_UNKNOWN:
                             case STATUS_ADS_CONSENT_FAILED:
                             case STATUS_ADS_CONSENT_TIMED_OUT:
+                            case GoogleHelper.STATUS_ADS_NOT_REGISTERED:
                                 log(ADS, "Failed to determine consent");
                                 setAdsStatus(STATUS_ADS_CONSENT_FAILED);
                                 break;
@@ -1440,7 +1452,7 @@ public class GoogleHelper {
     //endregion
 
     //region Purchases
-    private HashMap<String, PurchaseInfo> mPurchaseInfo = new HashMap<>();
+    private final HashMap<String, PurchaseInfo> mPurchaseInfo = new HashMap<>();
 
     private static class PurchaseInfo {
         private final String key;
@@ -1606,7 +1618,7 @@ public class GoogleHelper {
         if (mPurchaseRegistered) {
             mBillingClient.startConnection(new BillingClientStateListener() {
                 @Override
-                public void onBillingSetupFinished(BillingResult billingResult) {
+                public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
                     log(BILLING, "Setup finished. Response code: " + getBillingResponseString(billingResult.getResponseCode())); //NON-NLS
                     if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
                         log(BILLING, "Billing setup worked. Check for pro status");
@@ -1678,33 +1690,35 @@ public class GoogleHelper {
                 @Override
                 public void run() {
                     log(BILLING, "Running purchases query");
-                    long time = System.currentTimeMillis();
-                    Purchase.PurchasesResult purchasesResult = mBillingClient.queryPurchases(BillingClient.SkuType.INAPP);
-                    D.log(BILLING, "Querying purchases elapsed time: " + (System.currentTimeMillis() - time) + "ms"); //NON-NLS
-                    if (purchasesResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                        for (PurchaseInfo info : mPurchaseInfo.values()) {
-                            boolean purchase_found = false;
-                            for (Purchase purchase : purchasesResult.getPurchasesList()) {
-                                if (info.key.equals(purchase.getSku()) && purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                                    verifyValidSignature(info.key, purchase);
-                                    purchase_found = true;
-                                    break;
-                                } else if (info.key.equals(purchase.getSku()) && purchase.getPurchaseState() == Purchase.PurchaseState.PENDING) {
-                                    setPurchaseStatus(info.key, INT_STATUS_PURCHASE_PENDING);
-                                    purchase_found = true;
+                    mBillingClient.queryPurchasesAsync(BillingClient.SkuType.INAPP, new PurchasesResponseListener() {
+                        @Override
+                        public void onQueryPurchasesResponse(@NonNull BillingResult billingResult, @NonNull List<Purchase> list) {
+                            if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                                for (PurchaseInfo info : mPurchaseInfo.values()) {
+                                    boolean purchase_found = false;
+                                    for (Purchase purchase : list) {
+                                        if (purchase.getSkus().contains(info.key) && purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                                            verifyValidSignature(info.key, purchase);
+                                            purchase_found = true;
+                                            break;
+                                        } else if (purchase.getSkus().contains(info.key) && purchase.getPurchaseState() == Purchase.PurchaseState.PENDING) {
+                                            setPurchaseStatus(info.key, INT_STATUS_PURCHASE_PENDING);
+                                            purchase_found = true;
+                                        }
+                                    }
+                                    if (!purchase_found) {
+                                        setPurchaseStatus(info.key, INT_STATUS_PURCHASE_OFF);
+                                    }
                                 }
-                            }
-                            if (!purchase_found) {
-                                setPurchaseStatus(info.key, INT_STATUS_PURCHASE_OFF);
+                            } else {
+                                log(BILLING, "queryPurchases() got an error response code: " + billingResult.getResponseCode()); //NON-NLS
+                                for (PurchaseInfo info : mPurchaseInfo.values()) {
+                                    setPurchaseStatus(info.key, INT_STATUS_PURCHASE_UNKNOWN);
+                                }
+                                reportDebugInfo('b', BILLING_QUERY_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) billingResult.getResponseCode(), null);
                             }
                         }
-                    } else {
-                        log(BILLING, "queryPurchases() got an error response code: " + purchasesResult.getResponseCode()); //NON-NLS
-                        for (PurchaseInfo info : mPurchaseInfo.values()) {
-                            setPurchaseStatus(info.key, INT_STATUS_PURCHASE_UNKNOWN);
-                        }
-                        reportDebugInfo('b', BILLING_QUERY_ERROR_BASE, ANALYTICS_STATUS_WARNING, (long) purchasesResult.getResponseCode(), null);
-                    }
+                    });
                 }
             };
 
@@ -1732,7 +1746,7 @@ public class GoogleHelper {
                             .build();
                     mBillingClient.querySkuDetailsAsync(params, new SkuDetailsResponseListener() {
                         @Override
-                        public void onSkuDetailsResponse(BillingResult billingResult, List<SkuDetails> skuDetailsList) {
+                        public void onSkuDetailsResponse(@NonNull BillingResult billingResult, List<SkuDetails> skuDetailsList) {
                             if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK &&
                                     skuDetailsList != null &&
                                     !skuDetailsList.isEmpty()) {
@@ -1854,12 +1868,12 @@ public class GoogleHelper {
                     if (purchases != null) {
                         for (PurchaseInfo info : mPurchaseInfo.values()) {
                             for (Purchase purchase : purchases) {
-                                if (info.key.equals(purchase.getSku()) && purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                                if (purchase.getSkus().contains(info.key) && purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
                                     if (!verifyValidSignature(info.key, purchase)) {
                                         checkForPurchaseFailedFromConsent(null);
                                     }
                                     break;
-                                } else if (info.key.equals(purchase.getSku()) && purchase.getPurchaseState() == Purchase.PurchaseState.PENDING) {
+                                } else if (purchase.getSkus().contains(info.key) && purchase.getPurchaseState() == Purchase.PurchaseState.PENDING) {
                                     checkForPurchaseFailedFromConsent(INT_STATUS_PURCHASE_PENDING);
                                     break;
                                 }
@@ -1890,6 +1904,7 @@ public class GoogleHelper {
         }
     }
 
+    @SuppressWarnings("unused")
     public void simulatePurchase(String sku) {
         if (isOld()) {
             return;
@@ -1918,7 +1933,7 @@ public class GoogleHelper {
                     // Generating Consume Response listener
                     final ConsumeResponseListener onConsumeListener = new ConsumeResponseListener() {
                         @Override
-                        public void onConsumeResponse(BillingResult response, String purchaseToken) {
+                        public void onConsumeResponse(BillingResult response, @NonNull String purchaseToken) {
                             D.log(BILLING, "finished attempting to consume purchase"); //NON-NLS
                             if (response.getResponseCode() == BillingClient.BillingResponseCode.OK ||
                                     response.getResponseCode() == BillingClient.BillingResponseCode.ITEM_NOT_OWNED) {
@@ -2225,6 +2240,7 @@ public class GoogleHelper {
                         case STATUS_ADS_CONSENT_UNKNOWN:
                         case STATUS_ADS_CONSENT_FAILED:
                         case STATUS_ADS_CONSENT_TIMED_OUT:
+                        case STATUS_ADS_NOT_REGISTERED:
                             mPrefGdpr.setVisible(false);
                             break;
                     }
@@ -2234,6 +2250,7 @@ public class GoogleHelper {
                 case INT_STATUS_PURCHASE_NOTHING:
                 case INT_STATUS_PURCHASE_PURCHASING_FROM_CONSENT:
                 case INT_STATUS_PURCHASE_UNKNOWN:
+                case INT_STATUS_PURCHASE_NONE_REGISTERED:
                 default:
                     mPrefGdpr.setVisible(false);
                     break;

@@ -1,0 +1,26 @@
+<resources>
+    <string name="general_ok_1">OK</string>
+    <string name="general_cancel_1">Отмена</string>
+    <string name="general_cancelling_1">Отмена…</string>
+    <string name="general_help_1">Справка</string>
+    <string name="general_settings_1">Настройки</string>
+    <string name="general_language_1">Pусский</string>
+    <string name="loading_ui_wait_1">Пожалуйста, подождите…</string>
+    <string name="open_link_failed_1">Ни одно приложение не может обработать этот запрос. Пожалуйста, установите веб-браузер.</string>
+    <!-- region Pro -->
+    <string name="settings_title_ads_1">Реклама и ПРО</string>
+    <string name="settings_title_pro_1">Перейти на ПРО</string>
+    <string name="settings_title_gdpr_1">Персонализация рекламы</string>
+    <!-- endregion -->
+    <string name="settings_summary_pro_off_no_price">Нажмите, чтобы купить, или, чтобы обновить, если вы уже купили.</string>
+    <string name="settings_summary_pro_off">Нажмите, чтобы купить (%s) или обновить, если вы уже купили.</string>
+    <string name="settings_summary_pro_on">Уже куплено</string>
+    <string name="settings_summary_gdpr_non_personalised">Показ неперсонализированной рекламы. Нажмите, чтобы изменить</string>
+    <string name="settings_summary_gdpr_personalised">Показ персонализированной рекламы. Нажмите, чтобы изменить</string>
+    <string name="settings_summary_gdpr_unknown">Нажмите, чтобы выбрать персонализированную или неперсонализированную рекламу</string>
+    <string name="settings_theme_title_1">Тема</string>
+    <string name="settings_theme_entry_light_1">светлая</string>
+    <string name="settings_theme_entry_dark_1">темная</string>
+    <string name="settings_theme_entry_battery_1">Режим энергосбережения</string>
+    <string name="settings_theme_entry_system_1">По yмолчанию</string>
+</resources>

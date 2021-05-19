@@ -2,7 +2,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.rjhartsoftware.googlehelper">
 
-    <uses-sdk tools:overrideLibrary="com.google.android.gms.ads.impl, com.google.firebase.crashlytics, com.google.firebase.remoteconfig, com.google.firebase.firebase_analytics, com.google.android.gms.gass, com.google.firebase.measurement, com.google.android.gms.measurement.api, com.google.android.gms.measurement.sdk, com.google.firebase.measurement_impl, com.google.android.gms.ads, com.google.android.gms.measurement.sdk.api, com.google.android.gms.measurement_base, com.google.android.gms.ads_base, com.google.android.ads.consent" />
+    <uses-sdk tools:overrideLibrary="com.google.android.gms.ads.impl, com.google.firebase.crashlytics, com.google.firebase.remoteconfig, com.google.firebase.firebase_analytics, com.google.android.gms.gass, com.google.firebase.measurement, com.google.android.gms.measurement.api, com.google.android.gms.measurement.sdk, com.google.firebase.measurement_impl, com.google.android.gms.ads, com.google.android.gms.measurement.sdk.api, com.google.android.gms.measurement_base, com.google.android.gms.ads_base, com.google.android.ads.consent, com.google.firebase.analytics.connector" />
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />

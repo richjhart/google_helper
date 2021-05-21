@@ -19,8 +19,8 @@
     <string name="settings_summary_gdpr_personalised">Показ персонализированной рекламы. Нажмите, чтобы изменить</string>
     <string name="settings_summary_gdpr_unknown">Нажмите, чтобы выбрать персонализированную или неперсонализированную рекламу</string>
     <string name="settings_theme_title_1">Тема</string>
-    <string name="settings_theme_entry_light_1">светлая</string>
-    <string name="settings_theme_entry_dark_1">темная</string>
+    <string name="settings_theme_entry_light_1">Светлая</string>
+    <string name="settings_theme_entry_dark_1">Темная</string>
     <string name="settings_theme_entry_battery_1">Режим энергосбережения</string>
     <string name="settings_theme_entry_system_1">По yмолчанию</string>
 </resources>

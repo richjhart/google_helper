@@ -2,23 +2,21 @@
 <resources>
     <color name="colorPrimary">#ce93d8</color> <!-- Primary 200 -->
     <color name="colorPrimaryDark">#6a1b9a</color> <!-- Standard with Purple 700 -->
-    <color name="colorAccent">#2196f3</color> <!-- Analogous 200 -->
-
-    <color name="toolbar_background">#7b1fa2</color>
-
-    <color name="main_background">#282828</color>
-    <color name="toolbar_text">#ffffff</color>
-    <color name="default_text_color">#ffffff</color>
-
-    <color name="default_text_color_disabled">#aaffffff</color>
-
-    <color name="old_shadow_color">#cccccc</color>
-
-    <!-- NEVER USED -->
     <color name="colorPrimaryDisabled">#ba68c8</color> <!-- Purple 300 -->
+    <color name="colorAccent">#2196f3</color> <!-- Analogous 200 -->
     <color name="colorAccentDark">#000066</color> <!-- Standard with Analogous 900 -->
     <color name="colorAccentDisabled">#7750c3</color> <!-- Analogous 400 -->
     <color name="colorTertiary">#a21f88</color> <!-- Analogous 2 500 -->
     <color name="color4">#46a21f</color> <!-- Complementary 700 -->
+
+    <color name="toolbar_background">#7b1fa2</color>
+    <color name="toolbar_text">#ffffff</color>
+
+    <color name="main_background">#282828</color>
+
+    <color name="default_text_color">#ffffff</color>
+    <color name="default_text_color_disabled">#aaffffff</color>
+
+    <color name="old_shadow_color">#cccccc</color>
 
 </resources>
